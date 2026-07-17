@@ -4,8 +4,8 @@ Monorepo: Express + TypeScript API, Next.js web app, and a shared package that
 holds the **single** definition of the permission matrix, domain types, and Zod
 schemas used by both.
 
-> **Status: Phase 0** — scaffolding, database schema, and permission model only.
-> No route handlers, controllers, or React components yet.
+> **Status: Phase 1** — authentication and the authorization middleware chain.
+> Backend only: no routes beyond `/api/auth/*`, no UI.
 
 ## Layout
 
@@ -17,7 +17,14 @@ playstack/
 │   │   │   ├── schema.prisma    Employee + RefreshToken models
 │   │   │   ├── migrations/      generated
 │   │   │   └── seed.ts          23-person org tree
-│   │   └── src/env.ts           zod-validated environment
+│   │   └── src/
+│   │       ├── env.ts           zod-validated environment
+│   │       ├── app.ts           express assembly
+│   │       ├── lib/             errors, prisma, cookie transport
+│   │       ├── middleware/      authenticate → authorize → sanitizeFields → errorHandler
+│   │       ├── routes/          auth.routes.ts (the only routes in Phase 1)
+│   │       ├── services/        auth.service.ts, guards.ts
+│   │       └── __tests__/       vitest + supertest — the RBAC evidence
 │   └── web/              Next.js frontend (config only this phase)
 ├── packages/
 │   └── shared/           @playstack/shared — imported by BOTH apps
@@ -128,6 +135,46 @@ Three helpers, in increasing order of completeness:
 - **Permission grants are explicit, not inherited.** No "SUPER_ADMIN implies
   everything" shortcut — that makes carving out an exception later impossible
   without rewriting the evaluator.
+
+## The middleware chain
+
+Order is load-bearing. Each link answers exactly one question, and each assumes
+the previous one already ran:
+
+| # | Middleware        | Question it answers                                    |
+| - | ----------------- | ------------------------------------------------------ |
+| 1 | `authenticate`    | Who are you? Verifies the JWT, then re-reads the employee (and their role) from the database. 401. |
+| 2 | `authorize(perm)` | May your **role** do this **verb**? One `can()` call against the shared matrix. 403. |
+| 3 | `sanitizeFields`  | Which **fields** may you write on **this target**? Loads the target, checks each body key. 403 by default. |
+| 4 | *guards*          | Do the **business rules** allow it? Self-scope, last-admin, self-role-change. Pure functions in `services/guards.ts`. |
+| 5 | `errorHandler`    | Turns thrown `AppError`s into responses. Last, always. |
+
+`authenticate` deliberately ignores `role` in the JWT payload and re-reads it
+per request. A JWT is a signed snapshot: demote someone at 10:00 and their
+09:58 token still validly claims `SUPER_ADMIN` until it expires. One indexed
+primary-key lookup buys immediate revocation.
+
+## Tests
+
+```bash
+npm test     # 71 tests: guards (unit) + auth routes + RBAC (integration)
+```
+
+Integration tests run against a **separate** `playstack_test` database
+(`TEST_DATABASE_URL`) because they truncate tables between tests. Phase 1 ships
+no employee routes, so the RBAC suite mounts the real middleware chain onto
+throwaway handlers in `src/__tests__/helpers/harness.ts` — a test-only file that
+nothing in `src/` imports. Phase 2's controllers should wire the chain in the
+same order.
+
+## Phase 1 exit criteria
+
+- [x] Auth service: login, refresh with rotation + reuse detection, logout
+- [x] Middleware chain: authenticate, authorize, sanitizeFields, errorHandler
+- [x] Token transport: access in body, refresh in httpOnly/SameSite=Strict cookie
+- [x] Guards: five pure functions, unit-tested without a database
+- [x] `/api/auth/*` routes, login rate-limited 5/15min per IP+email
+- [x] 71 tests passing
 
 ## Phase 0 exit criteria
 

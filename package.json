@@ -19,6 +19,7 @@
     "db:seed": "npm run db:seed --workspace @playstack/api",
     "db:reset": "npm run db:reset --workspace @playstack/api",
     "db:studio": "npm run db:studio --workspace @playstack/api",
+    "test": "npm run build:shared && npm run test --workspace @playstack/api",
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "npm run typecheck --workspaces --if-present"

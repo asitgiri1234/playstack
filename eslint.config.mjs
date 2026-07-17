@@ -10,6 +10,11 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // REQUIRED. ESLint's flat-config file discovery only walks **/*.js unless a
+    // config names other extensions, so without this `eslint .` silently linted
+    // zero TypeScript files and reported a clean pass. A linter that inspects
+    // nothing is worse than no linter — it reports success.
+    files: ['**/*.{js,mjs,cjs,ts,tsx}'],
     rules: {
       // Phase-0 constraint: no `any` anywhere. An escape hatch here silently
       // becomes an escape hatch in the permission layer later.

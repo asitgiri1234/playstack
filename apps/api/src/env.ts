@@ -24,7 +24,9 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
-  BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
+  // Floor of 4 only so the test suite can hash fixtures cheaply; the real
+  // minimum is enforced below and applies everywhere except NODE_ENV=test.
+  BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
   CORS_ORIGIN: z.string().url().default('http://localhost:3000'),
 });
 
@@ -40,6 +42,20 @@ export const env = parsed.data;
 // The two secrets must differ — see .env.example for why.
 if (env.JWT_SECRET === env.JWT_REFRESH_SECRET) {
   console.error('JWT_SECRET and JWT_REFRESH_SECRET must be different values.');
+  process.exit(1);
+}
+
+/**
+ * A bcrypt cost below 10 is not a real defence for a stored password — it is
+ * the difference between an offline cracker doing thousands of guesses a second
+ * and millions. Tests are the one exception: they hash throwaway fixtures
+ * dozens of times per file, and the work factor protects production data, not
+ * `Password@123`. Any other environment must meet the floor.
+ */
+if (env.NODE_ENV !== 'test' && env.BCRYPT_ROUNDS < 10) {
+  console.error(
+    `BCRYPT_ROUNDS must be at least 10 outside tests (got ${String(env.BCRYPT_ROUNDS)}).`,
+  );
   process.exit(1);
 }
 
