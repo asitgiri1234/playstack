@@ -282,3 +282,52 @@ export interface Paginated<T> {
   data: T[];
   pagination: PaginationMeta;
 }
+
+// ---------------------------------------------------------------------------
+// Organization hierarchy
+// ---------------------------------------------------------------------------
+
+/** Matches MAX_TREE_DEPTH in hierarchy.service.ts. */
+export const MAX_TREE_DEPTH = 100;
+
+/**
+ * `null` is a meaningful value here — it detaches the employee and makes them a
+ * root — so the key is required and nullable rather than optional. An omitted
+ * key and an explicit null must not mean the same thing on a targeted endpoint
+ * whose entire job is setting this one field.
+ */
+export const assignManagerSchema = z
+  .object({
+    managerId: uuidSchema.nullable(),
+  })
+  .strict();
+export type AssignManagerInput = z.infer<typeof assignManagerSchema>;
+
+export const orgTreeQuerySchema = z
+  .object({
+    /** Return only the subtree rooted at this employee. */
+    rootId: uuidSchema.optional(),
+    /** Cap returned levels. Unlimited when omitted. */
+    depth: z.coerce.number().int().min(1).max(MAX_TREE_DEPTH).optional(),
+  })
+  .strict();
+export type OrgTreeQuery = z.infer<typeof orgTreeQuerySchema>;
+
+export const reporteesQuerySchema = z
+  .object({
+    /**
+     * Defaults to true: immediate reports are the common case, and the full
+     * subtree is the expensive one — so the cheap answer is what you get unless
+     * you ask otherwise.
+     */
+    direct: z
+      .union([z.boolean(), z.string(), z.undefined()])
+      .transform((v) => {
+        if (v === undefined) return true;
+        if (typeof v === 'boolean') return v;
+        return !['false', '0', 'no'].includes(v.toLowerCase());
+      })
+      .pipe(z.boolean()),
+  })
+  .strict();
+export type ReporteesQuery = z.infer<typeof reporteesQuerySchema>;

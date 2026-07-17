@@ -628,9 +628,13 @@ describe('PUT /api/employees/:id and PATCH /api/employees/me', () => {
   });
 
   it('rejects making an employee their own manager', async () => {
-    const hr = await makeEmployee({ role: 'HR_MANAGER' });
+    // SUPER_ADMIN, not HR: writing managerId needs MANAGER:ASSIGN (Phase 3), so
+    // an HR actor would 403 at sanitizeFields and never reach the rule this
+    // test is actually about. The HR-is-blocked case is covered separately in
+    // hierarchy.test.ts.
+    const admin = await makeEmployee({ role: 'SUPER_ADMIN' });
     const target = await makeEmployee({ role: 'EMPLOYEE' });
-    const token = await tokenFor(hr);
+    const token = await tokenFor(admin);
 
     const res = await request(app)
       .put(`/api/employees/${target.id}`)

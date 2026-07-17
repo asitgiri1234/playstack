@@ -4,8 +4,8 @@ Monorepo: Express + TypeScript API, Next.js web app, and a shared package that
 holds the **single** definition of the permission matrix, domain types, and Zod
 schemas used by both.
 
-> **Status: Phase 2** — employee CRUD, search/filter/sort/pagination, and the
-> dashboard stats endpoint. Backend only, no UI.
+> **Status: Phase 3** — organizational hierarchy: reporting tree, direct
+> reports, manager assignment, cycle prevention. Backend only, no UI.
 
 ## Layout
 
@@ -197,10 +197,46 @@ Enforced by `serializeEmployee(employee, actor)`. Every response goes through
 it; nothing hands a raw Prisma object to `res.json()`. Fields are **omitted**
 rather than nulled — `salary: null` is indistinguishable from "not set".
 
+## Organizational hierarchy
+
+| Endpoint | Permission | Notes |
+| -------- | ---------- | ----- |
+| `GET /api/organization/tree` | `ORG:READ_TREE` (all roles) | `?rootId` subtree, `?depth=N` cap. Multiple roots supported |
+| `GET /api/employees/:id/reportees` | scope-checked | `?direct=true` (default) or `?direct=false` for the full subtree |
+| `PATCH /api/employees/:id/manager` | `MANAGER:ASSIGN` (SUPER_ADMIN) | Body `{ managerId: string \| null }` |
+
+The chart is not a secret — every role may read it. What differs is each node's
+*content*: `serializeEmployee` runs per node, so an EMPLOYEE sees all 21 names
+and titles and exactly one salary, their own.
+
+**Cycle prevention** (`hierarchy.service.ts`) rejects self-assignment, any
+descendant as manager (at any depth), and missing/soft-deleted managers.
+
+- **Recursive CTE, not a parent walk.** Walking *up* from the new manager is
+  O(depth) round trips and loops forever if the data already contains a cycle.
+  One depth-capped CTE descending from a known root cannot hang.
+- **Raw SQL is a considered exception.** Prisma's builder cannot express
+  recursion. It is confined to this one file, every value is bound via
+  `Prisma.sql`, and results are typed explicitly (`$queryRaw` returns `unknown`).
+  No `::uuid` casts: Prisma maps `String @id` to a **text** column.
+- **Depth capped at 100** regardless of approach, so pre-existing bad data
+  degrades into a truncated result instead of a hung query.
+- **Writes re-check inside a Serializable transaction.** A pre-check plus a
+  later write is a TOCTOU window: two reassignments can each be individually
+  legal and jointly form a cycle. The isolation level is what closes it.
+
+**Tree building is one query**, not one per node. N+1 here is invisible at 23
+employees and fatal at 2,000 — so the test asserts the query count stays *constant*
+as the org grows, rather than asserting latency.
+
+**Orphans** (a `managerId` pointing at a missing/deleted row) are logged and
+surfaced as roots, never dropped. A slightly wrong tree gets fixed; a silently
+missing employee does not.
+
 ## Tests
 
 ```bash
-npm test     # 128 tests
+npm test     # 160 tests
 ```
 
 Integration tests run against a **separate** `playstack_test` database
@@ -209,6 +245,17 @@ no employee routes, so the RBAC suite mounts the real middleware chain onto
 throwaway handlers in `src/__tests__/helpers/harness.ts` — a test-only file that
 nothing in `src/` imports. Phase 2's controllers should wire the chain in the
 same order.
+
+## Phase 3 exit criteria
+
+- [x] `assertNoCycle` — self, descendant-at-any-depth, missing/deleted manager
+- [x] Recursive CTEs (`getDescendantIds`, `getAncestorIds`), depth-capped, parameterized
+- [x] `GET /api/organization/tree` — one query, in-memory build, multiple roots, orphans surfaced
+- [x] `GET /api/employees/:id/reportees` — direct or full subtree, self-scoped
+- [x] `PATCH /api/employees/:id/manager` — Serializable re-check, returns moved subtree
+- [x] Closed a real hole: `managerId` now requires `MANAGER:ASSIGN`, so `PUT /:id`
+      is no longer an unlocked, cycle-free back door to the same change
+- [x] 160 tests passing
 
 ## Phase 2 exit criteria
 

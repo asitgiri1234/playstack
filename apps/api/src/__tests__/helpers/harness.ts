@@ -24,6 +24,7 @@ import { sanitizeFields } from '../../middleware/sanitizeFields.js';
 import { errorHandler, notFoundHandler } from '../../middleware/errorHandler.js';
 import { authRouter } from '../../routes/auth.routes.js';
 import { employeeRouter } from '../../routes/employee.routes.js';
+import { organizationRouter } from '../../routes/organization.routes.js';
 import {
   assertCanAssignRole,
   assertHRCannotTouchSuperAdmin,
@@ -57,6 +58,7 @@ export function createTestApp(): Express {
   // still cover chain wiring that the real routes don't exercise (strip mode,
   // the DELETE-vs-demote split); the employee suite hits these real ones.
   app.use('/api/employees', employeeRouter);
+  app.use('/api/organization', organizationRouter);
 
   /**
    * READ one employee. READ_ALL holders skip the scope check; everyone else

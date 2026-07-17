@@ -10,11 +10,15 @@
 
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import {
+  assignManagerSchema,
   createEmployeeSchema,
   listEmployeesQuerySchema,
+  reporteesQuerySchema,
   selfUpdateEmployeeSchema,
   updateEmployeeSchema,
+  type AssignManagerInput,
   type ListEmployeesQuery,
+  type ReporteesQuery,
 } from '@playstack/shared';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorize } from '../middleware/authorize.js';
@@ -22,6 +26,7 @@ import { sanitizeFields } from '../middleware/sanitizeFields.js';
 import { validateBody } from '../middleware/validate.js';
 import { validateQuery } from '../middleware/validateQuery.js';
 import * as employeeService from '../services/employee.service.js';
+import * as organizationService from '../services/organization.service.js';
 import {
   serializeEmployee,
   serializeEmployees,
@@ -99,6 +104,51 @@ employeeRouter.patch(
       actor,
     );
     res.status(200).json({ data: serializeEmployee(employee, actor) });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// GET /api/employees/:id/reportees
+//
+// No authorize(): like GET /:id, the verb is READ_SELF or READ_ALL and the real
+// question is scope, which the service settles with assertSelfScope.
+// ---------------------------------------------------------------------------
+employeeRouter.get(
+  '/:id/reportees',
+  authenticate,
+  validateQuery(reporteesQuerySchema),
+  wrap(async (req, res) => {
+    const actor = actorOf(req);
+    const query = req.validatedQuery as ReporteesQuery;
+    const reportees = await organizationService.getReportees(
+      req.params.id ?? '',
+      query.direct,
+      actor,
+    );
+    res.status(200).json({ data: reportees });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// PATCH /api/employees/:id/manager
+//
+// MANAGER:ASSIGN — SUPER_ADMIN only. Reshaping the reporting tree is its own
+// verb, distinct from editing an employee's details.
+//
+// No sanitizeFields: the body is a single field validated by assignManagerSchema
+// (.strict), and the permission above is exactly the field-level rule
+// sanitizeFields would apply.
+// ---------------------------------------------------------------------------
+employeeRouter.patch(
+  '/:id/manager',
+  authenticate,
+  authorize('MANAGER:ASSIGN'),
+  validateBody(assignManagerSchema),
+  wrap(async (req, res) => {
+    const actor = actorOf(req);
+    const { managerId } = req.body as AssignManagerInput;
+    const result = await organizationService.assignManager(req.params.id ?? '', managerId, actor);
+    res.status(200).json({ data: result.employee, subtree: result.subtree });
   }),
 );
 

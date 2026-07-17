@@ -128,6 +128,24 @@ export const WRITABLE_FIELDS = {
 } as const satisfies Record<Role, readonly MutableEmployeeField[]>;
 
 /**
+ * Fields whose WRITE requires a permission beyond the role's field whitelist.
+ *
+ * `managerId` is here because reshaping the reporting tree is its own verb —
+ * MANAGER:ASSIGN, held only by SUPER_ADMIN. Without this entry the whitelist
+ * (`HR_MANAGER: [...MUTABLE_EMPLOYEE_FIELDS]`) would let HR reassign anyone's
+ * manager via `PUT /employees/:id`, silently bypassing the permission that
+ * exists precisely to stop that — two doors to one action, one of them
+ * unlocked. Encoding it here keeps both doors, and the UI, on one rule.
+ *
+ * Note this gates *updates* only: canWriteField is consulted by sanitizeFields,
+ * which runs on update routes. Setting an initial manager during
+ * EMPLOYEE:CREATE is ordinary onboarding and stays open to HR.
+ */
+const FIELD_WRITE_PERMISSIONS = {
+  managerId: 'MANAGER:ASSIGN',
+} as const satisfies Partial<Record<MutableEmployeeField, Permission>>;
+
+/**
  * Narrow an arbitrary incoming key to a known mutable field.
  * Request bodies are `unknown` until proven otherwise; this is the gate.
  */
@@ -159,6 +177,12 @@ export function canWriteField(
   // whitelist so it also blocks harmless-looking writes (`phone`) that would
   // otherwise be a foothold for account takeover via a password-reset flow.
   if (actorRole === 'HR_MANAGER' && targetRole === 'SUPER_ADMIN') return false;
+
+  // Some fields need a verb of their own on top of the whitelist.
+  const required: Permission | undefined = (
+    FIELD_WRITE_PERMISSIONS as Partial<Record<string, Permission>>
+  )[field];
+  if (required !== undefined && !can(actorRole, required)) return false;
 
   const allowed: readonly MutableEmployeeField[] = WRITABLE_FIELDS[actorRole];
   return allowed.includes(field);

@@ -30,6 +30,7 @@ import {
   enforceAll,
 } from './guards.js';
 import { EMPLOYEE_SELECT, type Actor, type SerializableEmployee } from './employee.serializer.js';
+import { assertNoCycle } from './hierarchy.service.js';
 
 /** Prisma's unique-constraint violation. */
 const P2002_UNIQUE_VIOLATION = 'P2002';
@@ -378,13 +379,18 @@ export async function update(
     );
   }
 
-  if (data.managerId !== undefined && data.managerId !== null) {
-    if (data.managerId === id) throw conflict('An employee cannot be their own manager.');
-    const manager = await prisma.employee.findFirst({
-      where: { id: data.managerId, ...LIVE },
-      select: { id: true },
-    });
-    if (manager === null) throw notFound('Manager not found.');
+  if (data.managerId !== undefined) {
+    /**
+     * The same cycle check the dedicated PATCH /:id/manager route runs.
+     *
+     * This route is a second door to the identical structural change, so it
+     * needs the identical lock — otherwise `PUT /employees/:id` with a
+     * managerId is a quiet way to build a reporting cycle that the endpoint
+     * built to prevent cycles would have refused. Reaching managerId at all
+     * already requires MANAGER:ASSIGN (see FIELD_WRITE_PERMISSIONS), enforced
+     * upstream by sanitizeFields.
+     */
+    await assertNoCycle(id, data.managerId, actor.role);
   }
 
   /**
