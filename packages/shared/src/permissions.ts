@@ -7,7 +7,13 @@
  * *allow*. Only the second one is security; the first is courtesy.
  */
 
-import { MUTABLE_EMPLOYEE_FIELDS, type MutableEmployeeField, type Role } from './types.js';
+import {
+  MUTABLE_EMPLOYEE_FIELDS,
+  READABLE_EMPLOYEE_FIELDS,
+  type MutableEmployeeField,
+  type ReadableEmployeeField,
+  type Role,
+} from './types.js';
 
 // ---------------------------------------------------------------------------
 // Permissions
@@ -256,4 +262,64 @@ export function canApplyEmployeeUpdate(
 
 function isRole(value: unknown): value is Role {
   return value === 'SUPER_ADMIN' || value === 'HR_MANAGER' || value === 'EMPLOYEE';
+}
+
+// ---------------------------------------------------------------------------
+// Field-level READ control
+// ---------------------------------------------------------------------------
+
+/**
+ * Fields that are not readable by everyone, and the permission each requires.
+ *
+ * Guarding writes while leaking every salary on GET is a hole, not a system:
+ * the read side needs the same single definition the write side has, or the UI
+ * and the API will disagree about what is even visible.
+ *
+ * Derived from ROLE_PERMISSIONS rather than naming roles, so a role that gains
+ * READ_ALL tomorrow gains salary visibility with it — no second list to update.
+ */
+const RESTRICTED_READ_FIELDS = {
+  // Your own salary is yours to see. Anyone else's requires READ_ALL, which is
+  // exactly the permission that means "may see the whole roster".
+  salary: 'EMPLOYEE:READ_ALL',
+  // Only the role that can soft-delete has any business seeing the tombstone,
+  // which is the same rule that gates ?includeDeleted.
+  deletedAt: 'EMPLOYEE:DELETE',
+} as const satisfies Partial<Record<ReadableEmployeeField, Permission>>;
+
+export interface ReadContext {
+  actorRole: Role;
+  /** True when the actor is reading their own record. */
+  isSelf: boolean;
+}
+
+export function isReadableEmployeeField(field: string): field is ReadableEmployeeField {
+  return (READABLE_EMPLOYEE_FIELDS as readonly string[]).includes(field);
+}
+
+/**
+ * May `ctx.actorRole` read `field` on this record?
+ *
+ * Whitelist: anything outside READABLE_EMPLOYEE_FIELDS (passwordHash, most
+ * obviously) is denied before any rule is consulted.
+ */
+export function canReadField(ctx: ReadContext, field: string): boolean {
+  if (!isReadableEmployeeField(field)) return false;
+
+  const required: Permission | undefined = (
+    RESTRICTED_READ_FIELDS as Partial<Record<string, Permission>>
+  )[field];
+  if (required === undefined) return true;
+
+  // Reading your own record shows your own restricted fields — but only the
+  // ones about you. deletedAt is not self-exempt: it is an administrative
+  // tombstone, and a soft-deleted employee cannot log in to read it anyway.
+  if (ctx.isSelf && field === 'salary') return true;
+
+  return can(ctx.actorRole, required);
+}
+
+/** The fields this actor may read, for building a Prisma `select` or a DTO. */
+export function readableFieldsFor(ctx: ReadContext): readonly ReadableEmployeeField[] {
+  return READABLE_EMPLOYEE_FIELDS.filter((f) => canReadField(ctx, f));
 }

@@ -47,6 +47,36 @@ export const MUTABLE_EMPLOYEE_FIELDS = [
 
 export type MutableEmployeeField = (typeof MUTABLE_EMPLOYEE_FIELDS)[number];
 
+/**
+ * Every Employee column that may EVER leave the API, for anyone.
+ *
+ * The read-side mirror of MUTABLE_EMPLOYEE_FIELDS, and a whitelist for the same
+ * reason: a column added to schema.prisma is invisible until it is listed here
+ * AND cleared by canReadField. `passwordHash` is absent and must stay absent —
+ * that omission is what stops a `select: *` refactor from serialising hashes to
+ * the browser.
+ */
+export const READABLE_EMPLOYEE_FIELDS = [
+  'id',
+  'employeeCode',
+  'name',
+  'email',
+  'phone',
+  'department',
+  'designation',
+  'salary',
+  'joiningDate',
+  'status',
+  'role',
+  'managerId',
+  'profileImage',
+  'deletedAt',
+  'createdAt',
+  'updatedAt',
+] as const;
+
+export type ReadableEmployeeField = (typeof READABLE_EMPLOYEE_FIELDS)[number];
+
 /** Shape the API hangs off a verified access token. */
 export interface AuthenticatedActor {
   id: string;

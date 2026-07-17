@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { authRouter } from './routes/auth.routes.js';
+import { employeeRouter } from './routes/employee.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { env } from './env.js';
 
@@ -40,8 +41,7 @@ export function createApp(): Express {
   });
 
   app.use('/api/auth', authRouter);
-
-  // Phase 2 mounts /api/employees here.
+  app.use('/api/employees', employeeRouter);
 
   app.use(notFoundHandler);
   // Must be last, and must stay last — Express selects error middleware by

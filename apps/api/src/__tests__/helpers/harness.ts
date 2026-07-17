@@ -23,6 +23,7 @@ import { authorize } from '../../middleware/authorize.js';
 import { sanitizeFields } from '../../middleware/sanitizeFields.js';
 import { errorHandler, notFoundHandler } from '../../middleware/errorHandler.js';
 import { authRouter } from '../../routes/auth.routes.js';
+import { employeeRouter } from '../../routes/employee.routes.js';
 import {
   assertCanAssignRole,
   assertHRCannotTouchSuperAdmin,
@@ -51,6 +52,11 @@ export function createTestApp(): Express {
 
   // The real auth routes, so integration tests exercise the shipping code.
   app.use('/api/auth', authRouter);
+
+  // Phase 2's real employee routes. The /test/* handlers below predate them and
+  // still cover chain wiring that the real routes don't exercise (strip mode,
+  // the DELETE-vs-demote split); the employee suite hits these real ones.
+  app.use('/api/employees', employeeRouter);
 
   /**
    * READ one employee. READ_ALL holders skip the scope check; everyone else

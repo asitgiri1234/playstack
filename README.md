@@ -4,8 +4,8 @@ Monorepo: Express + TypeScript API, Next.js web app, and a shared package that
 holds the **single** definition of the permission matrix, domain types, and Zod
 schemas used by both.
 
-> **Status: Phase 1** — authentication and the authorization middleware chain.
-> Backend only: no routes beyond `/api/auth/*`, no UI.
+> **Status: Phase 2** — employee CRUD, search/filter/sort/pagination, and the
+> dashboard stats endpoint. Backend only, no UI.
 
 ## Layout
 
@@ -154,10 +154,53 @@ per request. A JWT is a signed snapshot: demote someone at 10:00 and their
 09:58 token still validly claims `SUPER_ADMIN` until it expires. One indexed
 primary-key lookup buys immediate revocation.
 
+## GET /api/employees — query parameters
+
+All filters compose (AND across parameters, OR within a repeatable one). Every
+query filters `deletedAt: null` unless `includeDeleted` applies.
+
+| Param            | Type / values                                  | Default | Notes |
+| ---------------- | ---------------------------------------------- | ------- | ----- |
+| `search`         | string                                         | —       | Partial, case-insensitive, matches **name OR email** |
+| `department`     | string, **repeatable**                         | —       | Exact. `?department=Sales&department=Engineering` = OR |
+| `role`           | `SUPER_ADMIN` \| `HR_MANAGER` \| `EMPLOYEE`, **repeatable** | — | Exact |
+| `status`         | `ACTIVE` \| `INACTIVE`                         | —       | Exact |
+| `managerId`      | uuid                                           | —       | Direct reports of that manager |
+| `sortBy`         | `name` \| `joiningDate` \| `salary` \| `department` | `name` | Whitelist. Anything else → **400**, never 500 |
+| `sortOrder`      | `asc` \| `desc`                                | `asc`   | |
+| `page`           | int ≥ 1                                        | `1`     | |
+| `limit`          | int ≥ 1                                        | `20`    | **Clamped to 100.** Uncapped is free DoS |
+| `includeDeleted` | flag                                           | `false` | Honoured only for actors with `EMPLOYEE:DELETE`; **ignored** (not rejected) otherwise |
+
+Unknown query params are rejected with a 400 rather than ignored.
+
+Response envelope:
+
+```json
+{
+  "data": [ /* serialized employees */ ],
+  "pagination": { "page": 1, "limit": 20, "total": 21, "totalPages": 2, "hasNext": true, "hasPrev": false }
+}
+```
+
+## Salary visibility
+
+The read-side mirror of `WRITABLE_FIELDS`, defined in the same matrix
+(`canReadField`) so the UI and the API cannot disagree:
+
+- **SUPER_ADMIN / HR_MANAGER** — all salaries (they hold `EMPLOYEE:READ_ALL`)
+- **EMPLOYEE** — their own salary only
+- **`deletedAt`** — only actors holding `EMPLOYEE:DELETE`
+- **`passwordHash`** — nobody, ever; it is absent from the whitelist
+
+Enforced by `serializeEmployee(employee, actor)`. Every response goes through
+it; nothing hands a raw Prisma object to `res.json()`. Fields are **omitted**
+rather than nulled — `salary: null` is indistinguishable from "not set".
+
 ## Tests
 
 ```bash
-npm test     # 71 tests: guards (unit) + auth routes + RBAC (integration)
+npm test     # 128 tests
 ```
 
 Integration tests run against a **separate** `playstack_test` database
@@ -166,6 +209,17 @@ no employee routes, so the RBAC suite mounts the real middleware chain onto
 throwaway handlers in `src/__tests__/helpers/harness.ts` — a test-only file that
 nothing in `src/` imports. Phase 2's controllers should wire the chain in the
 same order.
+
+## Phase 2 exit criteria
+
+- [x] Employee service: list, getById, create, update, softDelete, restore
+- [x] Salary visibility via `serializeEmployee` — unit-tested directly, because
+      no route currently lets an EMPLOYEE reach another's record, so the
+      route-level tests alone would not have caught the rule being deleted
+- [x] `GET /api/employees` — search, repeatable filters, whitelisted sort, capped pagination
+- [x] `GET /api/employees/stats` — counts + groupings in one transaction, aggregated in Postgres
+- [x] Soft delete re-parents reports to the grandparent, in a transaction
+- [x] 128 tests passing
 
 ## Phase 1 exit criteria
 

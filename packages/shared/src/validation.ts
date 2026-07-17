@@ -115,7 +115,13 @@ export const createEmployeeSchema = z
     name: nameSchema,
     email: emailSchema,
     phone: phoneSchema,
-    password: passwordSchema,
+    /**
+     * Optional: when omitted the service generates a random temporary password
+     * and returns it ONCE in the 201 response for HR to hand over. Onboarding
+     * shouldn't require whoever fills the form to invent a password and then
+     * transmit it out-of-band anyway.
+     */
+    password: passwordSchema.optional(),
     department: departmentSchema,
     designation: designationSchema,
     salary: salarySchema,
@@ -181,21 +187,98 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export const refreshTokenSchema = z.object({ refreshToken: z.string().min(1) }).strict();
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 
-/** List/filter query. Coerced because query strings arrive as text. */
-export const employeeQuerySchema = z
+// ---------------------------------------------------------------------------
+// GET /api/employees query
+// ---------------------------------------------------------------------------
+
+/** Hard ceiling on page size. See LIST_LIMIT_MAX's comment below. */
+export const LIST_LIMIT_MAX = 100;
+export const LIST_LIMIT_DEFAULT = 20;
+
+/**
+ * The ONLY sortable columns.
+ *
+ * A z.enum, not a string: `orderBy` is the one place a list endpoint touches
+ * something structural rather than a value. Prisma parameterises `where`
+ * values, but a column NAME cannot be a bind parameter — so an unvalidated
+ * sortBy is passed through as an identifier. Anything outside this list must
+ * fail at the edge with a 400 naming the field, never reach the query builder
+ * and surface as a 500 (which leaks that the input was interpolated at all).
+ */
+export const SORTABLE_EMPLOYEE_FIELDS = ['name', 'joiningDate', 'salary', 'department'] as const;
+export type SortableEmployeeField = (typeof SORTABLE_EMPLOYEE_FIELDS)[number];
+
+/**
+ * Express gives `?x=1` as a string and `?x=1&x=2` as an array. Normalise both
+ * to an array so repeatable filters compose without the caller caring.
+ */
+const repeatable = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => (value === undefined ? undefined : Array.isArray(value) ? value : [value]),
+    z.array(schema).optional(),
+  );
+
+/**
+ * `?includeDeleted` with no value, `=true`, `=1` are all truthy; anything else
+ * is false. z.coerce.boolean() is wrong here — it makes the STRING "false"
+ * truthy, which is the opposite of what the caller typed.
+ */
+const booleanFlag = z
+  .union([z.boolean(), z.string(), z.undefined()])
+  .transform((v) => {
+    if (v === undefined) return false;
+    if (typeof v === 'boolean') return v;
+    return ['', 'true', '1', 'yes'].includes(v.toLowerCase());
+  })
+  .pipe(z.boolean());
+
+export const listEmployeesQuerySchema = z
   .object({
+    /** Matched against name OR email, case-insensitive partial. */
     search: z.string().trim().max(120).optional(),
-    department: z.string().trim().max(60).optional(),
+    department: repeatable(z.string().trim().min(1).max(60)),
+    role: repeatable(roleSchema),
     status: statusSchema.optional(),
-    role: roleSchema.optional(),
     managerId: uuidSchema.optional(),
-    // Only a SUPER_ADMIN view should ever set this; the API gates it.
-    includeDeleted: z.coerce.boolean().default(false),
-    page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(20),
-    sortBy: z.enum(['name', 'joiningDate', 'salary', 'createdAt']).default('createdAt'),
-    sortDir: z.enum(['asc', 'desc']).default('desc'),
+
+    sortBy: z.enum(SORTABLE_EMPLOYEE_FIELDS).default('name'),
+    sortOrder: z.enum(['asc', 'desc']).default('asc'),
+
+    page: z.coerce.number().int().min(1, 'page must be at least 1').default(1),
+    /**
+     * Clamped to 100 rather than rejected. An uncapped limit is free DoS:
+     * `?limit=10000000` asks Postgres to materialise the whole table, serialise
+     * it to JSON and hold it in the API's heap. Clamping (not 400-ing) because
+     * an over-large limit is usually a client computing a page size, not an
+     * attack — it should get 100 rows, not an error. The protection is
+     * identical either way, and it lives here at the schema so no caller can
+     * reach the query without passing through it.
+     */
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1, 'limit must be at least 1')
+      .default(LIST_LIMIT_DEFAULT)
+      .transform((v) => Math.min(v, LIST_LIMIT_MAX)),
+
+    /** Honoured only for actors who may delete; silently ignored otherwise. */
+    includeDeleted: booleanFlag,
   })
   .strict();
-export type EmployeeQueryInput = z.input<typeof employeeQuerySchema>;
-export type EmployeeQueryParsed = z.infer<typeof employeeQuerySchema>;
+
+export type ListEmployeesQueryInput = z.input<typeof listEmployeesQuerySchema>;
+export type ListEmployeesQuery = z.infer<typeof listEmployeesQuerySchema>;
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  pagination: PaginationMeta;
+}

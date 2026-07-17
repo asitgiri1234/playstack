@@ -21,6 +21,11 @@ declare global {
         id: string;
         role: Role;
       };
+      /**
+       * Parsed, coerced query set by validateQuery. Handlers read this, never
+       * req.query — the raw one is untyped strings and has skipped the schema.
+       */
+      validatedQuery?: unknown;
     }
   }
 }
