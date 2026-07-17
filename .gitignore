@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+.next/
+out/
+
+# Env files hold real secrets — only .env.example is tracked.
+.env
+.env.*
+!.env.example
+
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+coverage/
+.eslintcache
+*.tsbuildinfo
+
+# Local Postgres volume if bind-mounted
+.docker-data/

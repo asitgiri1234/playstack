@@ -1,0 +1,36 @@
+{
+  "name": "playstack",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Playstack — Employee Management System",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:shared": "npm run build --workspace @playstack/shared",
+    "dev": "npm run build:shared && concurrently -n api,web -c blue,magenta \"npm run dev --workspace @playstack/api\" \"npm run dev --workspace @playstack/web\"",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run db:migrate --workspace @playstack/api",
+    "db:seed": "npm run db:seed --workspace @playstack/api",
+    "db:reset": "npm run db:reset --workspace @playstack/api",
+    "db:studio": "npm run db:studio --workspace @playstack/api",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.2",
+    "concurrently": "^9.1.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1"
+  }
+}

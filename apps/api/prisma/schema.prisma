@@ -1,0 +1,107 @@
+// Playstack — Employee Management System
+// Phase 0: schema only. No queries live here yet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum Role {
+  SUPER_ADMIN
+  HR_MANAGER
+  EMPLOYEE
+}
+
+model Employee {
+  id String @id @default(uuid())
+
+  // Human-facing identifier ("EMP-0001"). Deliberately separate from `id`:
+  // the uuid is stable and internal, this one is printed on badges and shown
+  // in the UI, and it must survive being reassigned or re-formatted without
+  // breaking every foreign key in the database.
+  employeeCode String @unique
+
+  name         String
+  email        String @unique
+  phone        String
+  passwordHash String
+
+  department  String
+  designation String
+
+  // Decimal, never Float. Money in binary floating point cannot represent
+  // 0.1 exactly; totals drift and payroll stops reconciling.
+  salary Decimal @db.Decimal(12, 2)
+
+  joiningDate DateTime
+
+  status Status @default(ACTIVE)
+  role   Role   @default(EMPLOYEE)
+
+  // Org chart. SetNull, not Cascade: deleting a manager must orphan their
+  // reports for reassignment, never delete the reports along with them.
+  managerId String?
+  manager   Employee?  @relation("Reports", fields: [managerId], references: [id], onDelete: SetNull)
+  reports   Employee[] @relation("Reports")
+
+  profileImage String?
+
+  // Soft delete. null = live record. Every read filters on this.
+  // Rows are kept because salary and reporting history are audit evidence.
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  // managerId  — org-tree walks and "who reports to X"
+  // email      — login path; @unique already indexes it, listed here for intent
+  // department — the primary dashboard filter
+  // status     — ACTIVE/INACTIVE filter, paired with department below
+  // deletedAt  — on EVERY query, so it earns its own index
+  @@index([managerId])
+  @@index([department])
+  @@index([status])
+  @@index([deletedAt])
+  // Composite for the common list view: live employees in a department.
+  // Column order matters — deletedAt is the always-present predicate.
+  @@index([deletedAt, department, status])
+  @@map("employees")
+}
+
+// A stateless JWT cannot be revoked, so "log out everywhere" and "disable this
+// account now" are impossible with access tokens alone. Refresh tokens are
+// stored server-side, which makes revocation a real database write.
+model RefreshToken {
+  id String @id @default(uuid())
+
+  // SHA-256 of the token, never the token itself. A stolen database dump must
+  // not hand the attacker a set of working sessions. (bcrypt is unnecessary
+  // here: the token is already high-entropy random, not a guessable password.)
+  tokenHash String @unique
+
+  employeeId String
+  // Cascade: a hard-deleted employee's sessions must not outlive the row.
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  // Set on logout or rotation. Non-null = unusable, but kept so a replay of a
+  // revoked token is detectable rather than just a cache miss.
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([employeeId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}

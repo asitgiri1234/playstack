@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: playstack-postgres
+    restart: unless-stopped
+    environment:
+      # `:?` = fail fast if unset. No fallback defaults anywhere in this file:
+      # a default password here would be a real credential committed to git,
+      # and would also let a typo'd .env silently start a differently-configured
+      # database that Prisma then can't reach.
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    ports:
+      - '${POSTGRES_PORT:?set POSTGRES_PORT in .env}:5432'
+    volumes:
+      - playstack_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # `prisma migrate` fails noisily if it connects before Postgres finishes
+      # its init pass, so gate dependents on a real readiness probe.
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: playstack-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?set PGADMIN_EMAIL in .env}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?set PGADMIN_PASSWORD in .env}
+      # Local-only convenience; do not carry this image config to production.
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - '${PGADMIN_PORT:?set PGADMIN_PORT in .env}:80'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - playstack_pgadmin:/var/lib/pgadmin
+
+volumes:
+  playstack_pgdata:
+  playstack_pgadmin:
