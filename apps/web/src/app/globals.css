@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Design tokens.
+ *
+ * Every colour the UI uses resolves through a semantic variable below
+ * (--surface, --border, --text-muted…), never a raw palette value in a
+ * component. Phase 5 adds dark mode by redefining this block under a
+ * [data-theme='dark'] selector — a token swap, not a rewrite. The moment a
+ * component hardcodes `zinc-200`, that stops being true.
+ *
+ * Accent is an evergreen, deliberately not the default #3B82F6 admin blue.
+ * The neutral is zinc — very slightly warm, which keeps the evergreen from
+ * reading as clinical.
+ */
+:root {
+  /* Neutral scale — zinc */
+  --zinc-50: #fafafa;
+  --zinc-100: #f4f4f5;
+  --zinc-200: #e4e4e7;
+  --zinc-300: #d4d4d8;
+  --zinc-400: #a1a1aa;
+  --zinc-500: #71717a;
+  --zinc-600: #52525b;
+  --zinc-700: #3f3f46;
+  --zinc-800: #27272a;
+  --zinc-900: #18181b;
+  --zinc-950: #09090b;
+
+  /* Accent — evergreen */
+  --accent-50: #eff6f3;
+  --accent-100: #d7e9e2;
+  --accent-200: #b0d3c6;
+  --accent-300: #82b7a5;
+  --accent-400: #559883;
+  --accent-500: #38796a;
+  --accent-600: #2b6154;
+  --accent-700: #244e45;
+  --accent-800: #1f3f38;
+  --accent-900: #1a342f;
+
+  /* Status — muted, never pure saturated */
+  --success-50: #f0fdf4;
+  --success-600: #16803c;
+  --success-700: #15803d;
+  --danger-50: #fef2f2;
+  --danger-100: #fee2e2;
+  --danger-500: #ef4444;
+  --danger-600: #dc2626;
+  --danger-700: #b91c1c;
+  --warning-50: #fffbeb;
+  --warning-600: #d97706;
+
+  /* --- Semantic --- */
+  --bg: var(--zinc-50);
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-hover: var(--zinc-50);
+  --surface-sunken: var(--zinc-100);
+
+  --border: var(--zinc-200);
+  --border-strong: var(--zinc-300);
+
+  --text: var(--zinc-900);
+  --text-muted: var(--zinc-500);
+  --text-subtle: var(--zinc-400);
+  --text-inverted: #ffffff;
+
+  --primary: var(--accent-600);
+  --primary-hover: var(--accent-700);
+  --primary-subtle: var(--accent-50);
+  --primary-text: var(--accent-700);
+
+  --ring: var(--accent-500);
+
+  /* Subtle borders over heavy shadows — these are almost imperceptible on
+     purpose; depth comes from the border, not a drop shadow. */
+  --shadow-sm: 0 1px 2px 0 rgb(9 9 11 / 0.04);
+  --shadow-md: 0 2px 8px -2px rgb(9 9 11 / 0.08);
+  --shadow-lg: 0 8px 24px -6px rgb(9 9 11 / 0.12);
+
+  --radius: 0.5rem;
+  --radius-sm: 0.375rem;
+  --radius-lg: 0.75rem;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  /* 4/8px rhythm: everything in the UI is a multiple of 4. */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-feature-settings:
+    'cv02' 1,
+    'cv03' 1,
+    'cv04' 1;
+}
+
+/**
+ * Tabular numerals for money, dates and counts.
+ *
+ * Proportional digits make a column of salaries ragged — the eye cannot compare
+ * magnitudes when a 1 is narrower than an 8. This is the single highest-value
+ * typographic decision in a table like this.
+ */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* One focus treatment, everywhere. Never remove it without replacing it. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--zinc-100);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
+  animation: shimmer 1.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

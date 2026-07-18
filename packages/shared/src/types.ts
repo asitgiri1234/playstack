@@ -77,6 +77,37 @@ export const READABLE_EMPLOYEE_FIELDS = [
 
 export type ReadableEmployeeField = (typeof READABLE_EMPLOYEE_FIELDS)[number];
 
+/**
+ * What serializeEmployee actually emits — the contract between the API and the
+ * UI, defined once so neither side guesses.
+ *
+ * `salary` and `deletedAt` are OPTIONAL because the serializer omits fields the
+ * actor may not read (see canReadField). That optionality is the type system
+ * carrying a permission rule: a component that renders `employee.salary` has to
+ * handle it being absent, so "EMPLOYEE views the roster" cannot crash and
+ * cannot silently render `undefined`. They are omitted, never null — null would
+ * mean "no salary set", which is a different fact.
+ */
+export interface EmployeeDTO {
+  id: string;
+  employeeCode: string;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  designation: string;
+  /** Decimal string, not a number — see schema.prisma on money in floats. */
+  salary?: string;
+  joiningDate: string;
+  status: Status;
+  role: Role;
+  managerId: string | null;
+  profileImage: string | null;
+  deletedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Shape the API hangs off a verified access token. */
 export interface AuthenticatedActor {
   id: string;

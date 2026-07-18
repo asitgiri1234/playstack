@@ -11,11 +11,23 @@
     "declaration": false,
     "declarationMap": false,
     "plugins": [{ "name": "next" }],
+    // Must be re-declared here: `paths` resolve against the baseUrl of the
+    // config that DEFINES it, so inheriting the root's "." would make "./src/*"
+    // mean <repo-root>/src/*. The API never noticed because it only aliases
+    // @playstack/shared, which npm workspaces already symlinks into
+    // node_modules — this alias has no such fallback.
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      // Same specifier as the API uses. One matrix, one import path.
-      "@playstack/shared": ["../../packages/shared/src/index.ts"],
-      "@playstack/shared/*": ["../../packages/shared/src/*"]
+      "@/*": ["./src/*"]
+      // @playstack/shared is deliberately NOT aliased to its source.
+      //
+      // Pointing at packages/shared/src makes webpack compile the TS itself,
+      // and shared's ESM imports use explicit './permissions.js' specifiers
+      // that webpack cannot map back to .ts — the build fails outright. The
+      // npm-workspaces symlink already resolves the package to its built dist
+      // (main + types), which is plain JS with real .js files, so the normal
+      // node resolution is both correct and simpler. `npm run build:shared`
+      // runs ahead of dev/build/test for exactly this reason.
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

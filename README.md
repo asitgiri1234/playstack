@@ -4,8 +4,10 @@ Monorepo: Express + TypeScript API, Next.js web app, and a shared package that
 holds the **single** definition of the permission matrix, domain types, and Zod
 schemas used by both.
 
-> **Status: Phase 3** — organizational hierarchy: reporting tree, direct
-> reports, manager assignment, cycle prevention. Backend only, no UI.
+> **Status: Phase 4** — frontend foundation: auth flow, app shell, protected
+> routes, the employee table with filters, and create/edit forms. The UI
+> imports `can()` and the Zod schemas from the shared package — one matrix, two
+> consumers.
 
 ## Layout
 
@@ -25,7 +27,13 @@ playstack/
 │   │       ├── routes/          auth.routes.ts (the only routes in Phase 1)
 │   │       ├── services/        auth.service.ts, guards.ts
 │   │       └── __tests__/       vitest + supertest — the RBAC evidence
-│   └── web/              Next.js frontend (config only this phase)
+│   └── web/              Next.js App Router frontend
+│       └── src/
+│           ├── app/            (auth)/login, (dashboard)/{employees,profile}
+│           ├── components/     ui/, layout/, employees/, auth/, profile/
+│           ├── hooks/          use-employee-filters, use-employees, use-directory
+│           ├── lib/            api.ts, auth-context.tsx, providers, format
+│           └── middleware.ts   route-level redirect (UX only — API is the gate)
 ├── packages/
 │   └── shared/           @playstack/shared — imported by BOTH apps
 │       └── src/
@@ -233,10 +241,40 @@ as the org grows, rather than asserting latency.
 surfaced as roots, never dropped. A slightly wrong tree gets fixed; a silently
 missing employee does not.
 
+## Frontend (Phase 4)
+
+Next.js App Router. Server Components for the static shells; `'use client'` only
+where interactivity requires it. Design uses CSS-variable tokens (zinc neutral +
+an evergreen accent, deliberately not #3B82F6) so Phase 5's dark mode is a token
+swap, not a rewrite.
+
+Load-bearing decisions, each commented at its source:
+
+- **In-memory access token.** Held in a module variable, never localStorage —
+  localStorage is XSS-readable, and one bad dependency turns that into a stolen
+  session. A page refresh re-mints it from the httpOnly refresh cookie via a
+  single `/api/auth/refresh` on mount, so refreshing does not log you out.
+- **Coordinated refresh.** Parallel requests that 401 wait behind ONE in-flight
+  refresh. Firing N refreshes would rotate the token N times, and rotation
+  treats the now-revoked older token as reuse — hard-logging-out the user by
+  their own dashboard loading.
+- **URL is the state.** Every filter/sort/page lives in the query string, so a
+  filtered view is shareable and survives refresh. There is no fetch-once-then-
+  filter-in-JS; each change hits the API, which also means salary is stripped
+  per-actor server-side rather than shipped and hidden.
+- **Middleware is UX only.** It reads a forgeable, non-sensitive hint cookie to
+  avoid flashing the wrong first screen. The API authenticates every request and
+  re-reads the role from the database; the redirect is courtesy, not a gate.
+
+Permission-driven UI throughout, all delegating to `can()` / `canWriteField()` /
+`canAssignRole()` from the shared matrix: sidebar links are filtered (not
+greyed), row actions gated, and form fields disabled or omitted — a disabled
+input and a 403 are the same rule rendered two ways.
+
 ## Tests
 
 ```bash
-npm test     # 160 tests
+npm test     # 160 backend tests
 ```
 
 Integration tests run against a **separate** `playstack_test` database
@@ -245,6 +283,16 @@ no employee routes, so the RBAC suite mounts the real middleware chain onto
 throwaway handlers in `src/__tests__/helpers/harness.ts` — a test-only file that
 nothing in `src/` imports. Phase 2's controllers should wire the chain in the
 same order.
+
+## Phase 4 exit criteria
+
+- [x] Typed API client — in-memory token, single-flight refresh queue, typed `ApiError`
+- [x] Auth context + `usePermission`, rehydrate-on-mount, UX-only route middleware
+- [x] App shell — login, responsive sidebar/topbar, permission-filtered nav, auth guard with skeleton
+- [x] Employee table — server-driven filter/sort/pagination, URL-as-state, all three of loading/empty/error built
+- [x] Create/edit forms — shared Zod schemas, field-level permission gating, 400/409 mapped onto inputs
+- [x] TanStack Query data layer, toasts, invalidate-and-refetch after mutations
+- [x] Verified in a real browser across all three roles (34 behaviours); typecheck, lint, and production build all clean
 
 ## Phase 3 exit criteria
 

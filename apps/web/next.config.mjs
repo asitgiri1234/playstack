@@ -1,10 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // The shared package ships TypeScript source, so Next must compile it rather
-  // than treat it as a prebuilt node_modules dependency. This is what lets the
-  // UI import the permission matrix directly from packages/shared.
-  transpilePackages: ['@playstack/shared'],
+  // No transpilePackages for @playstack/shared: it is consumed as its built
+  // dist via the workspace symlink, which is already plain JS. Compiling its
+  // source here would make webpack choke on shared's explicit './x.js' ESM
+  // specifiers. Run `npm run build:shared` first — the root scripts do.
   eslint: {
     // Linting is a root-level concern here; `npm run lint` covers the monorepo.
     ignoreDuringBuilds: true,
