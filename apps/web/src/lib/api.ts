@@ -5,7 +5,14 @@
  * token lives, and what happens when several requests 401 at once.
  */
 
-import type { EmployeeDTO, PaginationMeta, Permission, Role } from '@playstack/shared';
+import type {
+  EmployeeDTO,
+  OrgTreeNode,
+  OrgTreeResponse,
+  PaginationMeta,
+  Permission,
+  Role,
+} from '@playstack/shared';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -287,6 +294,17 @@ export const api = {
 
   stats(): Promise<EmployeeStats> {
     return request<EmployeeStats>('/api/employees/stats');
+  },
+
+  orgTree(): Promise<OrgTreeResponse> {
+    return request<OrgTreeResponse>('/api/organization/tree');
+  },
+
+  assignManager(
+    id: string,
+    managerId: string | null,
+  ): Promise<{ data: EmployeeDTO; subtree: OrgTreeNode[] }> {
+    return request(`/api/employees/${id}/manager`, { method: 'PATCH', body: { managerId } });
   },
 };
 

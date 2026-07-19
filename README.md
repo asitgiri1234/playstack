@@ -4,10 +4,9 @@ Monorepo: Express + TypeScript API, Next.js web app, and a shared package that
 holds the **single** definition of the permission matrix, domain types, and Zod
 schemas used by both.
 
-> **Status: Phase 4** — frontend foundation: auth flow, app shell, protected
-> routes, the employee table with filters, and create/edit forms. The UI
-> imports `can()` and the Zod schemas from the shared package — one matrix, two
-> consumers.
+> **Status: Phase 5** — dashboard with charts, organizational tree view, and
+> dark mode. Consumes Phase 2's `/stats` and Phase 3's `/organization/tree`.
+> Dark mode is a pure CSS-variable token swap; charts read the same tokens.
 
 ## Layout
 
@@ -271,6 +270,34 @@ Permission-driven UI throughout, all delegating to `can()` / `canWriteField()` /
 greyed), row actions gated, and form fields disabled or omitted — a disabled
 input and a 403 are the same rule rendered two ways.
 
+## Dashboard, org tree, and dark mode (Phase 5)
+
+**Dark mode is a token swap.** Every colour resolves through a semantic CSS
+variable (`--surface`, `--border`, `--text`…); the `.dark` block in `globals.css`
+redefines only that semantic layer, and every component follows because none
+names a colour directly. next-themes toggles `class="dark"` on `<html>` with a
+pre-paint script (no flash of wrong theme) and honours `prefers-color-scheme` on
+first visit. The two overlay leaks Phase 4 left (`bg-zinc-950/20`) were replaced
+with an `--overlay` token during the audit.
+
+**Charts read the same tokens.** `useChartTheme` reads the chart CSS variables
+off the document at runtime and re-reads them on theme change, so recharts gets
+concrete colours that recolour with the page — a chart can't be legible in one
+theme and unreadable in the other. Each chart carries a visible title **and** an
+`sr-only` data table of the same numbers: the SVG is `aria-hidden`, the table is
+its accessible equivalent.
+
+- **Dashboard** (`DASHBOARD:READ` — SUPER_ADMIN + HR) consumes `/stats` in one
+  request. Four stat cards + a department bar chart + role and status donuts.
+  An EMPLOYEE who reaches `/dashboard` is redirected to `/profile`.
+- **Org tree** (`ORG:READ_TREE` — everyone) renders from the single
+  `/organization/tree` payload — no per-node fetch. Collapsible nodes with
+  connector lines, expand/collapse-all, multiple roots, keyboard-operable, and a
+  detail drawer. Salary is absent for anyone the server stripped it for.
+- **Manager reassignment** from the drawer (SUPER_ADMIN) → `PATCH
+  /employees/:id/manager`. Cycle prevention stays server-owned; its 409 surfaces
+  as an inline field error, never reimplemented client-side.
+
 ## Tests
 
 ```bash
@@ -283,6 +310,16 @@ no employee routes, so the RBAC suite mounts the real middleware chain onto
 throwaway handlers in `src/__tests__/helpers/harness.ts` — a test-only file that
 nothing in `src/` imports. Phase 2's controllers should wire the chain in the
 same order.
+
+## Phase 5 exit criteria
+
+- [x] Dark mode via next-themes — pure token swap, no flash, system-aware, zero hardcoded hex in components
+- [x] Dashboard — one `/stats` request, four stat cards, three responsive recharts with sr-only table fallbacks
+- [x] Charts read colours from CSS vars — verified legible in both themes (donut animation disabled so theme toggles recolour cleanly)
+- [x] Org tree — single-payload render, collapsible nodes with connectors, expand/collapse-all, multiple roots, pan on overflow
+- [x] Node detail drawer — reuses Phase 4 edit form; manager reassignment (SUPER_ADMIN) with server-owned cycle check surfaced inline
+- [x] Dashboard gated to SUPER_ADMIN + HR; EMPLOYEE redirected to profile; salary never leaks into the tree
+- [x] Verified in a real browser across roles and both themes (24 behaviours); typecheck, lint, web build, and 160 backend tests all pass
 
 ## Phase 4 exit criteria
 

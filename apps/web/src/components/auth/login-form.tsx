@@ -33,9 +33,11 @@ export function LoginForm(): React.JSX.Element {
     try {
       await login(values.email, values.password);
       // `from` is set by middleware when it bounced an unauthenticated user, so
-      // signing in returns them where they were going.
+      // signing in returns them where they were going, else /dashboard — whose
+      // guard forwards an EMPLOYEE (no DASHBOARD:READ) on to /profile. One
+      // default, correct for every role by delegation.
       const from = searchParams.get('from');
-      router.replace(from !== null && from.startsWith('/') ? from : '/employees');
+      router.replace(from !== null && from.startsWith('/') ? from : '/dashboard');
     } catch (error) {
       if (error instanceof ApiError && error.status === 429) {
         setFormError(error.message);
@@ -56,7 +58,7 @@ export function LoginForm(): React.JSX.Element {
       {formError !== null ? (
         <div
           role="alert"
-          className="rounded-sm border border-danger-500/30 bg-danger-50 px-3 py-2 text-sm text-danger-700"
+          className="rounded-sm border border-danger-500/30 bg-danger-surface px-3 py-2 text-sm text-danger-text"
         >
           {formError}
         </div>

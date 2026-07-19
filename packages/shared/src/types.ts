@@ -108,6 +108,27 @@ export interface EmployeeDTO {
   updatedAt: string;
 }
 
+/**
+ * A node in GET /api/organization/tree.
+ *
+ * An EmployeeDTO (so salary is already stripped per-actor by the server) plus
+ * its subtree and the two counts the API computes server-side. `reports` is the
+ * recursion; the UI renders straight from this one payload, never fetching
+ * per node.
+ */
+export interface OrgTreeNode extends EmployeeDTO {
+  reports: OrgTreeNode[];
+  directReportCount: number;
+  totalDescendantCount: number;
+}
+
+/** Envelope of GET /api/organization/tree. */
+export interface OrgTreeResponse {
+  data: OrgTreeNode[];
+  /** How many nodes had a missing/deleted manager and were surfaced as roots. */
+  orphanCount: number;
+}
+
 /** Shape the API hangs off a verified access token. */
 export interface AuthenticatedActor {
   id: string;

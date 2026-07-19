@@ -1,9 +1,15 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
 
-export function Skeleton({ className }: { className?: string }): React.JSX.Element {
-  return <div className={cn('skeleton rounded-sm', className)} aria-hidden />;
+export function Skeleton({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}): React.JSX.Element {
+  return <div className={cn('skeleton rounded-sm', className)} style={style} aria-hidden />;
 }
 
 /**

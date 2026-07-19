@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, UserCircle, X } from 'lucide-react';
+import { LayoutDashboard, Network, Users, UserCircle, X } from 'lucide-react';
 import { can, type Permission } from '@playstack/shared';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,11 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'DASHBOARD:READ' },
   { href: '/employees', label: 'Employees', icon: Users, permission: 'EMPLOYEE:READ_ALL' },
+  // ORG:READ_TREE is held by every role, so the org chart shows for everyone —
+  // the tree strips salary per-actor server-side (Phase 3).
+  { href: '/organization', label: 'Organization', icon: Network, permission: 'ORG:READ_TREE' },
   { href: '/profile', label: 'My Profile', icon: UserCircle },
 ];
 
@@ -103,7 +107,7 @@ export function SidebarDrawer({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-40 md:hidden">
-      <div className="absolute inset-0 bg-zinc-950/20" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-overlay" onClick={onClose} aria-hidden />
       <aside className="relative flex h-full w-64 flex-col border-r border-border bg-surface">
         <div className="flex h-14 items-center justify-between border-b border-border px-4">
           <Brand />

@@ -72,7 +72,7 @@ export function ProfileView(): React.JSX.Element {
         {formError !== null ? (
           <div
             role="alert"
-            className="rounded-sm border border-danger-500/30 bg-danger-50 px-3 py-2 text-sm text-danger-700"
+            className="rounded-sm border border-danger-500/30 bg-danger-surface px-3 py-2 text-sm text-danger-text"
           >
             {formError}
           </div>

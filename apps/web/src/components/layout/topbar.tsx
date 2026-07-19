@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { initialsOf } from '@/lib/format';
 import { RoleBadge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from './theme-toggle';
 
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }): React.JSX.Element {
   const { user, logout } = useAuth();
@@ -51,6 +52,8 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }): React.JSX.Elem
             <RoleBadge role={user.role} />
           </>
         ) : null}
+        <ThemeToggle />
+        <div className="h-5 w-px bg-border" aria-hidden />
         <Button
           variant="ghost"
           size="sm"

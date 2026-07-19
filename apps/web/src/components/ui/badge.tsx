@@ -4,7 +4,7 @@ import type { Role, Status } from '@playstack/shared';
 
 const TONES = {
   neutral: 'bg-surface-sunken text-content-muted border-border',
-  success: 'bg-success-50 text-success-700 border-success-600/20',
+  success: 'bg-success-surface text-success-text border-success-600/20',
   muted: 'bg-surface-sunken text-content-subtle border-border',
   accent: 'bg-primary-subtle text-primary-text border-primary/20',
 } as const;

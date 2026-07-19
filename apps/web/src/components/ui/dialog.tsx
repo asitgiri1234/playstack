@@ -90,7 +90,7 @@ export function Dialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-zinc-950/20 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-overlay backdrop-blur-[1px]"
         onClick={onClose}
         aria-hidden
       />

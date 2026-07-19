@@ -5,11 +5,18 @@
 /**
  * Design tokens.
  *
- * Every colour the UI uses resolves through a semantic variable below
+ * Every colour the UI uses resolves through a SEMANTIC variable below
  * (--surface, --border, --text-muted…), never a raw palette value in a
- * component. Phase 5 adds dark mode by redefining this block under a
- * [data-theme='dark'] selector — a token swap, not a rewrite. The moment a
- * component hardcodes `zinc-200`, that stops being true.
+ * component. Dark mode is therefore a TOKEN SWAP: the `.dark` block near the
+ * bottom of this file redefines the semantic layer, and every component follows
+ * because none of them names a colour directly. The moment a component writes
+ * `bg-zinc-200` or a literal hex, that stops being true and dark mode springs a
+ * leak — which is exactly why Phase 5 audited for and removed the last two
+ * (`bg-zinc-950/20` overlays → the --overlay token below).
+ *
+ * next-themes toggles `class="dark"` on <html>; charts read these same
+ * variables through getComputedStyle (see lib/chart-theme.ts), so a chart can
+ * never be legible in one theme and unreadable in the other.
  *
  * Accent is an evergreen, deliberately not the default #3B82F6 admin blue.
  * The neutral is zinc — very slightly warm, which keeps the evergreen from
@@ -53,7 +60,7 @@
   --warning-50: #fffbeb;
   --warning-600: #d97706;
 
-  /* --- Semantic --- */
+  /* --- Semantic (light) --- */
   --bg: var(--zinc-50);
   --surface: #ffffff;
   --surface-raised: #ffffff;
@@ -75,6 +82,34 @@
 
   --ring: var(--accent-500);
 
+  /* Status surfaces referenced by badges/alerts, tokenised so dark mode can
+     dim them rather than glow. */
+  --success-surface: var(--success-50);
+  --success-text: var(--success-700);
+  --danger-surface: var(--danger-50);
+  --danger-text: var(--danger-700);
+  --warning-surface: var(--warning-50);
+  --warning-text: var(--warning-600);
+
+  /* Modal/drawer scrim. A token, because zinc-950/20 over a dark surface is
+     invisible — dark mode needs a stronger, cooler scrim. */
+  --overlay: rgb(9 9 11 / 0.2);
+
+  /* Skeleton shimmer, tokenised: a white sweep is invisible on a dark base. */
+  --skeleton-base: var(--zinc-100);
+  --skeleton-shimmer: rgb(255 255 255 / 0.6);
+
+  /* Chart series. Accent-led, with distinct hues that stay distinguishable in
+     both themes and for the common colour-vision deficiencies. Read by
+     lib/chart-theme.ts, never hardcoded in a chart component. */
+  --chart-1: var(--accent-500);
+  --chart-2: #6366f1;
+  --chart-3: #d97706;
+  --chart-4: #0ea5e9;
+  --chart-5: #db2777;
+  --chart-grid: var(--zinc-200);
+  --chart-axis: var(--zinc-500);
+
   /* Subtle borders over heavy shadows — these are almost imperceptible on
      purpose; depth comes from the border, not a drop shadow. */
   --shadow-sm: 0 1px 2px 0 rgb(9 9 11 / 0.04);
@@ -84,6 +119,67 @@
   --radius: 0.5rem;
   --radius-sm: 0.375rem;
   --radius-lg: 0.75rem;
+
+  color-scheme: light;
+}
+
+/**
+ * Dark theme — the token swap.
+ *
+ * Only the SEMANTIC layer is redefined; the raw palette above is reused. Note
+ * the surface ladder is not a simple inversion: --bg is the darkest, surfaces
+ * sit ABOVE it (lighter), which is how depth reads in dark UIs — raised things
+ * are lighter, not darker. Accent shifts one step brighter because the evergreen
+ * loses contrast against a near-black background.
+ */
+.dark {
+  --bg: var(--zinc-950);
+  --surface: var(--zinc-900);
+  --surface-raised: #1c1c1f;
+  --surface-hover: var(--zinc-800);
+  --surface-sunken: #141416;
+
+  --border: #2a2a2e;
+  --border-strong: var(--zinc-700);
+
+  --text: var(--zinc-100);
+  --text-muted: var(--zinc-400);
+  --text-subtle: var(--zinc-500);
+  --text-inverted: var(--zinc-950);
+
+  --primary: var(--accent-400);
+  --primary-hover: var(--accent-300);
+  --primary-subtle: rgb(56 121 106 / 0.15);
+  --primary-text: var(--accent-300);
+
+  --ring: var(--accent-400);
+
+  --success-surface: rgb(22 128 60 / 0.15);
+  --success-text: #4ade80;
+  --danger-surface: rgb(220 38 38 / 0.15);
+  --danger-text: #f87171;
+  --warning-surface: rgb(217 119 6 / 0.15);
+  --warning-text: #fbbf24;
+
+  --overlay: rgb(0 0 0 / 0.6);
+
+  --skeleton-base: var(--zinc-800);
+  --skeleton-shimmer: rgb(255 255 255 / 0.06);
+
+  --chart-1: var(--accent-400);
+  --chart-2: #818cf8;
+  --chart-3: #fbbf24;
+  --chart-4: #38bdf8;
+  --chart-5: #f472b6;
+  --chart-grid: #2a2a2e;
+  --chart-axis: var(--zinc-400);
+
+  /* Shadows barely register on dark surfaces; deepen and rely more on borders. */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 8px 24px -6px rgb(0 0 0 / 0.5);
+
+  color-scheme: dark;
 }
 
 * {
@@ -103,6 +199,20 @@ body {
     'cv02' 1,
     'cv03' 1,
     'cv04' 1;
+}
+
+/**
+ * Ease the surface/border/text colours between themes so the toggle is a smooth
+ * fade, not a flash. Scoped to colour properties only — transitioning `all`
+ * would drag layout and transforms into it. next-themes sets
+ * disableTransitionOnChange, which momentarily suppresses this during the swap
+ * to avoid a half-transitioned first paint; this rule governs deliberate toggles.
+ */
+:where(body, [class*='bg-surface'], [class*='border'], [class*='text-content']) {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 /**
@@ -133,7 +243,7 @@ body {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background-color: var(--zinc-100);
+  background-color: var(--skeleton-base);
 }
 
 .skeleton::after {
@@ -141,7 +251,7 @@ body {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background-image: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
+  background-image: linear-gradient(90deg, transparent, var(--skeleton-shimmer), transparent);
   animation: shimmer 1.6s infinite;
 }
 

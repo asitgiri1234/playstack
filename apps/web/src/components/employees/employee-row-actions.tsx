@@ -62,7 +62,7 @@ export function EmployeeRowActions({
                   setMenuOpen(false);
                   setConfirmOpen(true);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-base text-danger-600 hover:bg-danger-50"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-base text-danger-text hover:bg-danger-surface"
               >
                 <Trash2 className="h-3.5 w-3.5" aria-hidden />
                 Delete

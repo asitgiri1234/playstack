@@ -37,6 +37,10 @@ const config: Config = {
           50: 'var(--success-50)',
           600: 'var(--success-600)',
           700: 'var(--success-700)',
+          // Dark-aware pair for badges/alerts — dims to a translucent tint in
+          // dark mode instead of glowing.
+          surface: 'var(--success-surface)',
+          text: 'var(--success-text)',
         },
         danger: {
           50: 'var(--danger-50)',
@@ -44,10 +48,26 @@ const config: Config = {
           500: 'var(--danger-500)',
           600: 'var(--danger-600)',
           700: 'var(--danger-700)',
+          surface: 'var(--danger-surface)',
+          text: 'var(--danger-text)',
         },
         warning: {
           50: 'var(--warning-50)',
           600: 'var(--warning-600)',
+          surface: 'var(--warning-surface)',
+          text: 'var(--warning-text)',
+        },
+        // Modal/drawer scrim. A token because a light-mode zinc scrim is
+        // invisible over a dark surface.
+        overlay: 'var(--overlay)',
+        // Chart series, exposed to Tailwind so legends/tables can match the
+        // chart marks. The charts themselves read the CSS vars at runtime.
+        chart: {
+          1: 'var(--chart-1)',
+          2: 'var(--chart-2)',
+          3: 'var(--chart-3)',
+          4: 'var(--chart-4)',
+          5: 'var(--chart-5)',
         },
       },
       borderRadius: {

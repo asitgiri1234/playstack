@@ -13,7 +13,12 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: next-themes' pre-paint script sets class="dark"
+    // on <html> before React hydrates, so the server-rendered markup and the
+    // client's first render legitimately differ on this one attribute. Without
+    // this, React would warn about it on every load. It suppresses the warning
+    // for <html> only, not the whole tree.
+    <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-bg font-sans text-base text-content antialiased">
         <Providers>{children}</Providers>
       </body>
