@@ -1,0 +1,21 @@
+# Build context is the repo root (workspaces need the root lockfile).
+# Everything here is either rebuilt inside the image or must never enter it.
+
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/coverage
+.git
+.github
+
+# Secrets never enter a build context. The image gets configuration at RUN
+# time via compose/platform env vars, not baked in at build time.
+.env
+.env.*
+!.env.example
+
+*.log
+.DS_Store
+Thumbs.db
+docs/screenshots

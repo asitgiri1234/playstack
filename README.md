@@ -1,371 +1,295 @@
 # Playstack — Employee Management System
 
-Monorepo: Express + TypeScript API, Next.js web app, and a shared package that
-holds the **single** definition of the permission matrix, domain types, and Zod
-schemas used by both.
+Role-based employee management with a live org chart: three roles, field-level
+permissions enforced from **one shared matrix** that both the Express API and
+the Next.js UI import — so a rendered button and an accepting endpoint can
+never disagree.
 
-> **Status: Phase 5** — dashboard with charts, organizational tree view, and
-> dark mode. Consumes Phase 2's `/stats` and Phase 3's `/organization/tree`.
-> Dark mode is a pure CSS-variable token swap; charts read the same tokens.
+![Dashboard](docs/screenshots/dashboard-light.png)
 
-## Layout
+<p align="center">
+  <img src="docs/screenshots/org-tree.png" alt="Organization tree" width="70%" />
+</p>
+
+| More | |
+| --- | --- |
+| Dark mode | ![Dark dashboard](docs/screenshots/dashboard-dark.png) |
+| Employee table (filters + sort live in the URL) | ![Employees](docs/screenshots/employees-filtered.png) |
+| Edit form (field-level permission gating) | ![Form](docs/screenshots/employee-form.png) |
+| Login / Mobile | <img src="docs/screenshots/login.png" width="49%" /> <img src="docs/screenshots/mobile.png" width="23%" /> |
+
+## Demo credentials
+
+No public deployment (see [Deployment](#deployment)); `docker compose up`
+brings the full seeded stack live locally in one command. Then sign in at
+`http://localhost:3000` as any role:
+
+| Role | Email | Password | Sees |
+| --- | --- | --- | --- |
+| **Super Admin** | `aarav.mehta@playstack.dev` | `SuperAdmin@123` | Everything: dashboard, employees, org tree, delete/restore, manager + role assignment |
+| **HR Manager** | `priya.nair@playstack.dev` | `HrManager@123` | Dashboard + employees; cannot delete, cannot touch Super Admins, cannot reassign managers |
+| **Employee** | `ananya.bose@playstack.dev` | `Employee@123` | Own profile + org chart (no salaries but their own) |
+
+## Tech stack
+
+**API** Node.js · Express · TypeScript (strict) · Prisma · PostgreSQL 16 · JWT + bcrypt
+**Web** Next.js 15 (App Router) · React 19 · Tailwind · TanStack Query · react-hook-form · recharts · next-themes
+**Shared** `@playstack/shared` — permission matrix, Zod schemas, domain types (npm workspaces monorepo)
+**Tests** Vitest + Supertest (160 backend tests against a real Postgres)
+
+## Feature checklist
+
+Core requirements:
+
+- [x] Authentication — JWT access + rotating refresh tokens, bcrypt, real logout (server-side revocation)
+- [x] Three roles (Super Admin / HR Manager / Employee) with a single permission matrix
+- [x] Employee CRUD with soft delete + restore
+- [x] Search (name/email), filters (department/role/status, composable), sort, pagination — all server-driven
+- [x] Organizational hierarchy — manager assignment, direct/indirect reportees, cycle prevention
+- [x] Org tree visualisation — collapsible nodes, connectors, multiple roots, detail drawer
+- [x] Dashboard stats — counts + by-department + by-role, aggregated in Postgres
+- [x] Field-level permissions — per-role writable-field whitelist, enforced server-side
+- [x] Validation shared between frontend forms and backend middleware (one Zod source)
+
+Bonus:
+
+- [x] **Dark mode** — pure CSS-token swap, system-aware, no flash
+- [x] **Charts** — recharts, colours from the same theme tokens, sr-only table fallbacks
+- [x] **Salary visibility** — read-side field control (Employee sees only their own)
+- [x] **Rate limiting** — login, 5/15min per IP+email
+- [x] **Manager reassignment from the tree** — with server-side TOCTOU-safe cycle check
+- [x] **Docker** — one `docker compose up` for the whole stack
+- [x] **160 automated tests**, including RBAC/IDOR/escalation suites
+
+## Quick start
+
+Prereqs: Docker. That's it for the full-stack path.
+
+```bash
+git clone https://github.com/asitgiri1234/playstack.git
+cd playstack
+cp .env.example .env    # then replace every CHANGE_ME (see below)
+docker compose up -d --build
+```
+
+First build takes a few minutes; after that the stack is live:
+
+- Web → `http://localhost:3000` (log in with the table above)
+- API → `http://localhost:4000` (`/health`)
+- The API container applies migrations and seeds the demo org automatically
+  (seeding is skipped if the database already has data, so restarts never wipe it).
+
+Filling `.env`: set `POSTGRES_PASSWORD` and `PGADMIN_PASSWORD` to anything
+local, and generate the two JWT secrets (`openssl rand -base64 48`, twice —
+they must differ). Keep `DATABASE_URL` in sync with the `POSTGRES_*` values.
+
+<details>
+<summary><b>Dev loop instead (DB in Docker, apps with hot reload)</b></summary>
+
+```bash
+npm install
+cp .env.example .env      # fill CHANGE_ME values as above
+npm run db:up             # postgres + pgadmin only
+npm run db:migrate        # prisma migrate dev
+npm run db:seed           # 23-person org; prints the credentials table
+npm run dev               # api :4000 + web :3000, watch mode
+```
+
+`npm test` runs the backend suite (needs `TEST_DATABASE_URL` — a separate
+database, because tests truncate tables). `npm run typecheck` / `npm run lint`
+cover the monorepo.
+
+</details>
+
+## Architecture
 
 ```
 playstack/
 ├── apps/
-│   ├── api/              Express + TS backend
-│   │   ├── prisma/
-│   │   │   ├── schema.prisma    Employee + RefreshToken models
-│   │   │   ├── migrations/      generated
-│   │   │   └── seed.ts          23-person org tree
+│   ├── api/                  Express + TS
+│   │   ├── prisma/           schema, migrations, seed (23-person org tree)
 │   │   └── src/
-│   │       ├── env.ts           zod-validated environment
-│   │       ├── app.ts           express assembly
-│   │       ├── lib/             errors, prisma, cookie transport
-│   │       ├── middleware/      authenticate → authorize → sanitizeFields → errorHandler
-│   │       ├── routes/          auth.routes.ts (the only routes in Phase 1)
-│   │       ├── services/        auth.service.ts, guards.ts
-│   │       └── __tests__/       vitest + supertest — the RBAC evidence
-│   └── web/              Next.js App Router frontend
-│       └── src/
-│           ├── app/            (auth)/login, (dashboard)/{employees,profile}
-│           ├── components/     ui/, layout/, employees/, auth/, profile/
-│           ├── hooks/          use-employee-filters, use-employees, use-directory
-│           ├── lib/            api.ts, auth-context.tsx, providers, format
-│           └── middleware.ts   route-level redirect (UX only — API is the gate)
+│   │       ├── middleware/   authenticate → authorize → sanitizeFields → errorHandler
+│   │       ├── services/     business logic + pure permission guards
+│   │       ├── routes/       thin handlers (~5 lines each)
+│   │       └── __tests__/    160 tests: RBAC, IDOR, escalation, cycles, auth
+│   └── web/                  Next.js App Router
+│       └── src/              app/, components/, hooks/, lib/ (api client, auth)
 ├── packages/
-│   └── shared/           @playstack/shared — imported by BOTH apps
-│       └── src/
-│           ├── types.ts        Role, Status, MUTABLE_EMPLOYEE_FIELDS
-│           ├── permissions.ts  Permission, ROLE_PERMISSIONS, can(), WRITABLE_FIELDS
-│           └── validation.ts   Zod schemas
-├── docker-compose.yml    Postgres 16 (healthcheck) + pgAdmin
-└── .env.example
+│   └── shared/               THE point of the design:
+│       ├── permissions.ts    Permission union, ROLE_PERMISSIONS, can(),
+│       │                     WRITABLE_FIELDS, canWriteField, canReadField
+│       ├── validation.ts     Zod schemas (login, create/update, list query)
+│       └── types.ts          Role/Status enums, EmployeeDTO, OrgTreeNode
+└── docs/API.md               full endpoint reference
 ```
 
-## Getting started
+**Why the shared package is the design.** Authorization rules exist exactly
+once, in `packages/shared`, and are imported by both consumers. The Express
+middleware calls `can()` to *enforce*; the React sidebar calls the same `can()`
+to decide what to *render*. `sanitizeFields` (API) and the form's disabled
+fields (UI) are both `canWriteField()`. The Zod schema that rejects a bad phone
+number in the browser is byte-for-byte the schema the API re-parses on every
+request. Two consumers, one source of truth — the UI can never promise what the
+API refuses, and adding a permission is a one-file change that the type system
+routes to every consumer.
+
+The middleware chain answers one question per link: **authenticate** (who are
+you — role re-read from the DB, never trusted from the JWT), **authorize** (may
+this role do this verb), **sanitizeFields** (may they write these fields on
+this target), then state-dependent **guards** (pure functions: last-admin
+lockout, self-role-change, self-scope) inside the service. Handlers stay ~5
+lines; if a handler ever grows an `if (role === …)`, a rule has escaped the
+matrix.
+
+API reference: **[docs/API.md](docs/API.md)** — every endpoint with permission,
+shapes, and error codes, cross-checked against the route files.
+
+## Security
+
+Threats considered, and how each is mitigated — all of this is enforced
+server-side and covered by the test suite:
+
+**Credentials & sessions**
+- Passwords bcrypt-hashed (cost 12). Refresh tokens stored as **SHA-256 hashes**
+  — a database dump yields no working session.
+- Access token (15 min) lives **in browser memory only**; the refresh token is
+  an **httpOnly, SameSite=Strict cookie** scoped to `/api/auth`. One XSS can
+  read localStorage; it cannot read an httpOnly cookie — that asymmetry is the
+  entire placement decision.
+- Refresh tokens **rotate** on every use. Replaying a rotated token means two
+  parties hold it → the whole session family is revoked, forcing a password
+  login. Logout is a server-side revocation, not a client-side forget.
+
+**Authorization**
+- Every request is authorized **server-side**; the frontend's permission checks
+  are UX only (they call the same shared matrix, but the API re-decides).
+- `authenticate` **re-reads the role from the database per request** — a role
+  revoked at 10:00 is dead at 10:00, not when a stale JWT expires.
+- **Field-level writes are a whitelist** (`WRITABLE_FIELDS`): an Employee
+  PUT-ing `{ salary: 999999 }` or `{ role: "SUPER_ADMIN" }` gets a 403 naming
+  the rejected fields — never a silent strip, never a write. A column added to
+  the schema is unwritable by everyone until explicitly granted.
+- **Read-side control mirrors it**: `salary` is omitted from responses unless
+  the actor may see it (all-readers for admins/HR, self only for employees);
+  `passwordHash` is structurally unserialisable.
+
+**Privilege-escalation traps**
+- Cannot delete or demote the **last Super Admin** (system lockout is
+  unrecoverable — nobody left can mint an admin).
+- **HR cannot write anything on a Super Admin record** — even `phone`, which
+  would otherwise be a account-takeover foothold.
+- **Nobody edits their own `role`**, Super Admins included: privilege changes
+  require a second admin.
+- **IDOR guard**: self-scoped routes compare the URL id to the token subject
+  *before* the existence lookup, so 403-vs-404 can't be used to probe which
+  uuids exist.
+
+**Hierarchy integrity**
+- Manager cycles are refused via a depth-capped **recursive CTE** over the
+  descendant set, and the check is **re-run inside a Serializable transaction**
+  — two concurrent reassignments cannot jointly create a cycle (TOCTOU race,
+  verified empirically in the test suite).
+
+**Abuse & injection**
+- Login rate-limited (5 failed / 15 min per **IP+email**); failures return one
+  generic message and unknown emails still burn a dummy bcrypt compare, closing
+  both the response and the timing side of account enumeration.
+- `sortBy` is a **Zod enum whitelist** — column names can't be parameterised,
+  so nothing user-supplied is ever interpolated into a query. All values go
+  through Prisma's parameterisation.
+- Page size clamped at 100; JSON bodies capped at 100 kB; unknown body/query
+  keys rejected (`.strict()`), not ignored.
+- Prisma/stack errors never reach the client — one audited error envelope.
+
+## Design decisions & trade-offs
+
+| Decision | Why | Traded away |
+| --- | --- | --- |
+| **Postgres + Prisma** over Mongo | The org chart is relational (self-FK + recursive queries), and salary needs `Decimal(12,2)` — money in floats is a correctness bug, not a style choice | Schema migrations as a workflow cost |
+| **Refresh-token table** despite "stateless" JWT | Revocation must be a database write or logout is a client-side fiction; rotation + reuse detection need server state | One indexed lookup per refresh |
+| **Fresh role lookup per request** | Immediate revocation beats trusting a 15-min-stale claim | One PK lookup per request |
+| **Recursive CTE** for descendants | One query, and a **depth cap** means pre-poisoned data degrades to a truncated result instead of an infinite loop — an app-side parent-walk does the opposite | Raw SQL in exactly one file, parameterised |
+| **Soft delete + report re-parenting** (transactional) | Salary history is audit evidence; deleting a manager must not orphan a subtree | "Deleted" rows still occupy unique email/code space |
+| **Shared package** for matrix + schemas | See Architecture — one source of truth, two consumers | Build step ordering (`build:shared` first) |
+| **employeeCode ≠ id** | Human-facing codes get reformatted; foreign keys must not care | A uniqueness check + sequence logic |
+| **URL-as-state** for table filters | Filtered views are shareable and survive refresh; no client-side filtering of a stale array | More careful param plumbing |
+
+**Considered, deliberately out of scope** (judgment, not omission):
+sequence-backed employee codes (current max+retry approach is correct under
+contention but a Postgres sequence is cleaner — needs a migration); manager
+names embedded in the list response (the UI joins them from a capped directory
+lookup — past ~100 employees the right fix is a Prisma relation include
+server-side); subtree-scoped reads for managers ("a manager may see their own
+reports' records") — the permission model supports adding it as a new
+permission + guard without restructuring.
+
+## Testing
 
 ```bash
-npm install
-cp .env.example .env          # then replace EVERY CHANGE_ME value — see below
-npm run build:shared          # apps import @playstack/shared from dist
-npm run db:up                 # Postgres 16 + pgAdmin
-npm run db:migrate            # prisma migrate dev
-npm run db:seed               # org tree + demo credentials table
+npm test        # 160 tests, ~35s
 ```
 
-`.env.example` is a committed template and holds no real values. Fill in each
-`CHANGE_ME` before the first `db:up` — compose has no fallback defaults and will
-refuse to start rather than quietly use a placeholder credential:
+Vitest + Supertest against a **real Postgres** (`TEST_DATABASE_URL`, separate
+database — tests truncate between cases; the config refuses to run against a
+non-`playstack_test` database). Pure unit tests for the permission guards and
+serializer; integration tests drive real HTTP through the real middleware chain.
 
-```bash
-openssl rand -base64 48   # once for JWT_SECRET, again for JWT_REFRESH_SECRET
-```
+Coverage that matters: every RBAC denial in the matrix, IDOR probes, field
+escalation attempts (`salary`, `role`, unknown keys), token rotation + reuse
+revocation, stale-JWT-after-demotion, last-admin lockout, duplicate email
+races, cycle prevention including forced-interleave concurrency, salary
+visibility per actor, pagination/filter/sort correctness. Several controls were
+**mutation-tested** during development (delete the control, confirm the suite
+fails) — the query-count and TOCTOU tests exist specifically because their
+first versions passed vacuously.
 
-Set `POSTGRES_PASSWORD` to any local value, and make sure the password, user and
-port inside `DATABASE_URL` match the `POSTGRES_*` vars — they are not derived.
+## Deployment
 
-Postgres is exposed on `POSTGRES_PORT` (default `5432`). If that port is already
-taken locally, change `POSTGRES_PORT` **and** the port inside `DATABASE_URL` in
-`.env` — compose reads both from there.
+**No public deployment for this submission** — the tested, guaranteed path is
+`docker compose up` (above), which was verified from a clean clone. For a real
+deployment:
 
-pgAdmin: <http://localhost:5050> (credentials in `.env`).
+**Single Docker host (simplest, what the compose file already does)**
+The api image (multi-stage, non-root, prod-deps-only) applies migrations on
+boot; the web image is a Next.js standalone build. Point DNS at the host, put a
+TLS proxy (Caddy/Traefik) in front of ports 3000/4000, done.
 
-### Scripts
+**Split hosting (Vercel web + Railway/Render api+Postgres)**
+1. Provision Postgres; set `DATABASE_URL`.
+2. Deploy the api (build: `npm ci && npm run build:shared && npx prisma generate --schema apps/api/prisma/schema.prisma && npm run build -w @playstack/api`; start: `npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && node apps/api/dist/src/server.js`).
+3. Deploy the web on Vercel (root `apps/web`, build runs `build:shared` first), with `NEXT_PUBLIC_API_URL` pointing at the api.
+4. **Cookie caveat, by design**: the refresh cookie is `SameSite=Strict`, which
+   requires web and api to be **same-site** (e.g. `app.example.com` +
+   `api.example.com`). On unrelated domains (`*.vercel.app` + `*.railway.app`)
+   the browser will not send it and sessions won't survive refresh — that
+   strictness is deliberate CSRF posture, so deploy same-site rather than
+   weakening it to `None`.
 
-| Command              | What it does                                  |
-| -------------------- | --------------------------------------------- |
-| `npm run db:up`      | Start Postgres + pgAdmin                      |
-| `npm run db:down`    | Stop them                                     |
-| `npm run db:migrate` | Create + apply a migration, regenerate client |
-| `npm run db:seed`    | Wipe and reseed the demo org                  |
-| `npm run db:reset`   | Drop, re-migrate, reseed                      |
-| `npm run db:studio`  | Prisma Studio                                 |
-| `npm run typecheck`  | Typecheck every workspace                     |
-| `npm run lint`       | ESLint across the monorepo                    |
-| `npm run format`     | Prettier write                                |
+Production env checklist:
 
-## Permission matrix
+| Var | Note |
+| --- | --- |
+| `DATABASE_URL` | managed Postgres, TLS |
+| `JWT_SECRET`, `JWT_REFRESH_SECRET` | 48+ random bytes, **different values** (API refuses to boot otherwise) |
+| `CORS_ORIGIN` | the exact frontend origin — never `*` (the API sends credentials) |
+| `NODE_ENV=production` | flips the refresh cookie to `Secure` (HTTPS-only) automatically |
+| `NEXT_PUBLIC_API_URL` | public API URL — baked into the browser bundle at build time |
+| `BCRYPT_ROUNDS` | ≥ 10 enforced outside tests |
 
-Defined once in [`packages/shared/src/permissions.ts`](packages/shared/src/permissions.ts).
-The API enforces it; the UI reads it to decide what to render. Only the first is security.
+## Known limitations / what I'd do next
 
-| Permission             | SUPER_ADMIN | HR_MANAGER | EMPLOYEE |
-| ---------------------- | :---------: | :--------: | :------: |
-| `EMPLOYEE:CREATE`      |     ✅      |     ✅     |    ❌    |
-| `EMPLOYEE:READ_ALL`    |     ✅      |     ✅     |    ❌    |
-| `EMPLOYEE:READ_SELF`   |     ✅      |     ✅     |    ✅    |
-| `EMPLOYEE:UPDATE_ANY`  |     ✅      |     ✅     |    ❌    |
-| `EMPLOYEE:UPDATE_SELF` |     ✅      |     ✅     |    ✅    |
-| `EMPLOYEE:DELETE`      |     ✅      |     ❌     |    ❌    |
-| `ROLE:ASSIGN_ADMIN`    |     ✅      |     ❌     |    ❌    |
-| `MANAGER:ASSIGN`       |     ✅      |     ❌     |    ❌    |
-| `ORG:READ_TREE`        |     ✅      |     ✅     |    ✅    |
-| `DASHBOARD:READ`       |     ✅      |     ✅     |    ❌    |
-
-### Field-level writes
-
-`WRITABLE_FIELDS` is a **whitelist**. A column added to `schema.prisma` is
-unwritable by every role until it is added to `MUTABLE_EMPLOYEE_FIELDS` *and* to
-a role's list. Forgetting yields "HR can't edit the new field" — a bug report,
-not an incident.
-
-- **SUPER_ADMIN** — every mutable field.
-- **HR_MANAGER** — every mutable field, except:
-  - no writes at all to a target whose current role is `SUPER_ADMIN`;
-  - may not set `role` to `SUPER_ADMIN` (needs `ROLE:ASSIGN_ADMIN`).
-- **EMPLOYEE** — only `phone` and `profileImage`, only on their own record.
-
-Three helpers, in increasing order of completeness:
-
-- `can(role, permission)` — the verb only.
-- `canWriteField(actorRole, targetRole, field)` — verb + the HR/Super-Admin rule.
-- `canApplyEmployeeUpdate(ctx, patch)` — **prefer this at call sites.** Checks
-  verb, self-scope, field whitelist, and the incoming `role` value together, and
-  returns the accepted field list so the Prisma `data` object is built from the
-  matrix rather than from the request body. Rejects the whole patch if any field
-  is disallowed — a partial apply would tell the client a write landed when it didn't.
-
-## Design decisions worth knowing
-
-- **`salary` is `Decimal(12,2)`, never `Float`.** Binary floating point can't
-  represent `0.1`; payroll stops reconciling. Money crosses the wire as a string.
-- **Soft delete.** `deletedAt IS NULL` = live. Every read filters on it, so it is
-  indexed, including in a composite with `department` and `status`.
-- **`employeeCode` is separate from `id`.** The uuid is internal and stable; the
-  code is human-facing and must be reformattable without breaking foreign keys.
-- **`onDelete: SetNull` on `managerId`.** Deleting a manager orphans their reports
-  for reassignment; it must never cascade-delete the reports.
-- **`RefreshToken` is stored server-side.** A stateless JWT can't be revoked, so
-  "log out everywhere" needs a database row. Only the SHA-256 hash is stored.
-- **Two different JWT secrets.** A leaked access secret must not mint refresh tokens.
-- **Permission grants are explicit, not inherited.** No "SUPER_ADMIN implies
-  everything" shortcut — that makes carving out an exception later impossible
-  without rewriting the evaluator.
-
-## The middleware chain
-
-Order is load-bearing. Each link answers exactly one question, and each assumes
-the previous one already ran:
-
-| # | Middleware        | Question it answers                                    |
-| - | ----------------- | ------------------------------------------------------ |
-| 1 | `authenticate`    | Who are you? Verifies the JWT, then re-reads the employee (and their role) from the database. 401. |
-| 2 | `authorize(perm)` | May your **role** do this **verb**? One `can()` call against the shared matrix. 403. |
-| 3 | `sanitizeFields`  | Which **fields** may you write on **this target**? Loads the target, checks each body key. 403 by default. |
-| 4 | *guards*          | Do the **business rules** allow it? Self-scope, last-admin, self-role-change. Pure functions in `services/guards.ts`. |
-| 5 | `errorHandler`    | Turns thrown `AppError`s into responses. Last, always. |
-
-`authenticate` deliberately ignores `role` in the JWT payload and re-reads it
-per request. A JWT is a signed snapshot: demote someone at 10:00 and their
-09:58 token still validly claims `SUPER_ADMIN` until it expires. One indexed
-primary-key lookup buys immediate revocation.
-
-## GET /api/employees — query parameters
-
-All filters compose (AND across parameters, OR within a repeatable one). Every
-query filters `deletedAt: null` unless `includeDeleted` applies.
-
-| Param            | Type / values                                  | Default | Notes |
-| ---------------- | ---------------------------------------------- | ------- | ----- |
-| `search`         | string                                         | —       | Partial, case-insensitive, matches **name OR email** |
-| `department`     | string, **repeatable**                         | —       | Exact. `?department=Sales&department=Engineering` = OR |
-| `role`           | `SUPER_ADMIN` \| `HR_MANAGER` \| `EMPLOYEE`, **repeatable** | — | Exact |
-| `status`         | `ACTIVE` \| `INACTIVE`                         | —       | Exact |
-| `managerId`      | uuid                                           | —       | Direct reports of that manager |
-| `sortBy`         | `name` \| `joiningDate` \| `salary` \| `department` | `name` | Whitelist. Anything else → **400**, never 500 |
-| `sortOrder`      | `asc` \| `desc`                                | `asc`   | |
-| `page`           | int ≥ 1                                        | `1`     | |
-| `limit`          | int ≥ 1                                        | `20`    | **Clamped to 100.** Uncapped is free DoS |
-| `includeDeleted` | flag                                           | `false` | Honoured only for actors with `EMPLOYEE:DELETE`; **ignored** (not rejected) otherwise |
-
-Unknown query params are rejected with a 400 rather than ignored.
-
-Response envelope:
-
-```json
-{
-  "data": [ /* serialized employees */ ],
-  "pagination": { "page": 1, "limit": 20, "total": 21, "totalPages": 2, "hasNext": true, "hasPrev": false }
-}
-```
-
-## Salary visibility
-
-The read-side mirror of `WRITABLE_FIELDS`, defined in the same matrix
-(`canReadField`) so the UI and the API cannot disagree:
-
-- **SUPER_ADMIN / HR_MANAGER** — all salaries (they hold `EMPLOYEE:READ_ALL`)
-- **EMPLOYEE** — their own salary only
-- **`deletedAt`** — only actors holding `EMPLOYEE:DELETE`
-- **`passwordHash`** — nobody, ever; it is absent from the whitelist
-
-Enforced by `serializeEmployee(employee, actor)`. Every response goes through
-it; nothing hands a raw Prisma object to `res.json()`. Fields are **omitted**
-rather than nulled — `salary: null` is indistinguishable from "not set".
-
-## Organizational hierarchy
-
-| Endpoint | Permission | Notes |
-| -------- | ---------- | ----- |
-| `GET /api/organization/tree` | `ORG:READ_TREE` (all roles) | `?rootId` subtree, `?depth=N` cap. Multiple roots supported |
-| `GET /api/employees/:id/reportees` | scope-checked | `?direct=true` (default) or `?direct=false` for the full subtree |
-| `PATCH /api/employees/:id/manager` | `MANAGER:ASSIGN` (SUPER_ADMIN) | Body `{ managerId: string \| null }` |
-
-The chart is not a secret — every role may read it. What differs is each node's
-*content*: `serializeEmployee` runs per node, so an EMPLOYEE sees all 21 names
-and titles and exactly one salary, their own.
-
-**Cycle prevention** (`hierarchy.service.ts`) rejects self-assignment, any
-descendant as manager (at any depth), and missing/soft-deleted managers.
-
-- **Recursive CTE, not a parent walk.** Walking *up* from the new manager is
-  O(depth) round trips and loops forever if the data already contains a cycle.
-  One depth-capped CTE descending from a known root cannot hang.
-- **Raw SQL is a considered exception.** Prisma's builder cannot express
-  recursion. It is confined to this one file, every value is bound via
-  `Prisma.sql`, and results are typed explicitly (`$queryRaw` returns `unknown`).
-  No `::uuid` casts: Prisma maps `String @id` to a **text** column.
-- **Depth capped at 100** regardless of approach, so pre-existing bad data
-  degrades into a truncated result instead of a hung query.
-- **Writes re-check inside a Serializable transaction.** A pre-check plus a
-  later write is a TOCTOU window: two reassignments can each be individually
-  legal and jointly form a cycle. The isolation level is what closes it.
-
-**Tree building is one query**, not one per node. N+1 here is invisible at 23
-employees and fatal at 2,000 — so the test asserts the query count stays *constant*
-as the org grows, rather than asserting latency.
-
-**Orphans** (a `managerId` pointing at a missing/deleted row) are logged and
-surfaced as roots, never dropped. A slightly wrong tree gets fixed; a silently
-missing employee does not.
-
-## Frontend (Phase 4)
-
-Next.js App Router. Server Components for the static shells; `'use client'` only
-where interactivity requires it. Design uses CSS-variable tokens (zinc neutral +
-an evergreen accent, deliberately not #3B82F6) so Phase 5's dark mode is a token
-swap, not a rewrite.
-
-Load-bearing decisions, each commented at its source:
-
-- **In-memory access token.** Held in a module variable, never localStorage —
-  localStorage is XSS-readable, and one bad dependency turns that into a stolen
-  session. A page refresh re-mints it from the httpOnly refresh cookie via a
-  single `/api/auth/refresh` on mount, so refreshing does not log you out.
-- **Coordinated refresh.** Parallel requests that 401 wait behind ONE in-flight
-  refresh. Firing N refreshes would rotate the token N times, and rotation
-  treats the now-revoked older token as reuse — hard-logging-out the user by
-  their own dashboard loading.
-- **URL is the state.** Every filter/sort/page lives in the query string, so a
-  filtered view is shareable and survives refresh. There is no fetch-once-then-
-  filter-in-JS; each change hits the API, which also means salary is stripped
-  per-actor server-side rather than shipped and hidden.
-- **Middleware is UX only.** It reads a forgeable, non-sensitive hint cookie to
-  avoid flashing the wrong first screen. The API authenticates every request and
-  re-reads the role from the database; the redirect is courtesy, not a gate.
-
-Permission-driven UI throughout, all delegating to `can()` / `canWriteField()` /
-`canAssignRole()` from the shared matrix: sidebar links are filtered (not
-greyed), row actions gated, and form fields disabled or omitted — a disabled
-input and a 403 are the same rule rendered two ways.
-
-## Dashboard, org tree, and dark mode (Phase 5)
-
-**Dark mode is a token swap.** Every colour resolves through a semantic CSS
-variable (`--surface`, `--border`, `--text`…); the `.dark` block in `globals.css`
-redefines only that semantic layer, and every component follows because none
-names a colour directly. next-themes toggles `class="dark"` on `<html>` with a
-pre-paint script (no flash of wrong theme) and honours `prefers-color-scheme` on
-first visit. The two overlay leaks Phase 4 left (`bg-zinc-950/20`) were replaced
-with an `--overlay` token during the audit.
-
-**Charts read the same tokens.** `useChartTheme` reads the chart CSS variables
-off the document at runtime and re-reads them on theme change, so recharts gets
-concrete colours that recolour with the page — a chart can't be legible in one
-theme and unreadable in the other. Each chart carries a visible title **and** an
-`sr-only` data table of the same numbers: the SVG is `aria-hidden`, the table is
-its accessible equivalent.
-
-- **Dashboard** (`DASHBOARD:READ` — SUPER_ADMIN + HR) consumes `/stats` in one
-  request. Four stat cards + a department bar chart + role and status donuts.
-  An EMPLOYEE who reaches `/dashboard` is redirected to `/profile`.
-- **Org tree** (`ORG:READ_TREE` — everyone) renders from the single
-  `/organization/tree` payload — no per-node fetch. Collapsible nodes with
-  connector lines, expand/collapse-all, multiple roots, keyboard-operable, and a
-  detail drawer. Salary is absent for anyone the server stripped it for.
-- **Manager reassignment** from the drawer (SUPER_ADMIN) → `PATCH
-  /employees/:id/manager`. Cycle prevention stays server-owned; its 409 surfaces
-  as an inline field error, never reimplemented client-side.
-
-## Tests
-
-```bash
-npm test     # 160 backend tests
-```
-
-Integration tests run against a **separate** `playstack_test` database
-(`TEST_DATABASE_URL`) because they truncate tables between tests. Phase 1 ships
-no employee routes, so the RBAC suite mounts the real middleware chain onto
-throwaway handlers in `src/__tests__/helpers/harness.ts` — a test-only file that
-nothing in `src/` imports. Phase 2's controllers should wire the chain in the
-same order.
-
-## Phase 5 exit criteria
-
-- [x] Dark mode via next-themes — pure token swap, no flash, system-aware, zero hardcoded hex in components
-- [x] Dashboard — one `/stats` request, four stat cards, three responsive recharts with sr-only table fallbacks
-- [x] Charts read colours from CSS vars — verified legible in both themes (donut animation disabled so theme toggles recolour cleanly)
-- [x] Org tree — single-payload render, collapsible nodes with connectors, expand/collapse-all, multiple roots, pan on overflow
-- [x] Node detail drawer — reuses Phase 4 edit form; manager reassignment (SUPER_ADMIN) with server-owned cycle check surfaced inline
-- [x] Dashboard gated to SUPER_ADMIN + HR; EMPLOYEE redirected to profile; salary never leaks into the tree
-- [x] Verified in a real browser across roles and both themes (24 behaviours); typecheck, lint, web build, and 160 backend tests all pass
-
-## Phase 4 exit criteria
-
-- [x] Typed API client — in-memory token, single-flight refresh queue, typed `ApiError`
-- [x] Auth context + `usePermission`, rehydrate-on-mount, UX-only route middleware
-- [x] App shell — login, responsive sidebar/topbar, permission-filtered nav, auth guard with skeleton
-- [x] Employee table — server-driven filter/sort/pagination, URL-as-state, all three of loading/empty/error built
-- [x] Create/edit forms — shared Zod schemas, field-level permission gating, 400/409 mapped onto inputs
-- [x] TanStack Query data layer, toasts, invalidate-and-refetch after mutations
-- [x] Verified in a real browser across all three roles (34 behaviours); typecheck, lint, and production build all clean
-
-## Phase 3 exit criteria
-
-- [x] `assertNoCycle` — self, descendant-at-any-depth, missing/deleted manager
-- [x] Recursive CTEs (`getDescendantIds`, `getAncestorIds`), depth-capped, parameterized
-- [x] `GET /api/organization/tree` — one query, in-memory build, multiple roots, orphans surfaced
-- [x] `GET /api/employees/:id/reportees` — direct or full subtree, self-scoped
-- [x] `PATCH /api/employees/:id/manager` — Serializable re-check, returns moved subtree
-- [x] Closed a real hole: `managerId` now requires `MANAGER:ASSIGN`, so `PUT /:id`
-      is no longer an unlocked, cycle-free back door to the same change
-- [x] 160 tests passing
-
-## Phase 2 exit criteria
-
-- [x] Employee service: list, getById, create, update, softDelete, restore
-- [x] Salary visibility via `serializeEmployee` — unit-tested directly, because
-      no route currently lets an EMPLOYEE reach another's record, so the
-      route-level tests alone would not have caught the rule being deleted
-- [x] `GET /api/employees` — search, repeatable filters, whitelisted sort, capped pagination
-- [x] `GET /api/employees/stats` — counts + groupings in one transaction, aggregated in Postgres
-- [x] Soft delete re-parents reports to the grandparent, in a transaction
-- [x] 128 tests passing
-
-## Phase 1 exit criteria
-
-- [x] Auth service: login, refresh with rotation + reuse detection, logout
-- [x] Middleware chain: authenticate, authorize, sanitizeFields, errorHandler
-- [x] Token transport: access in body, refresh in httpOnly/SameSite=Strict cookie
-- [x] Guards: five pure functions, unit-tested without a database
-- [x] `/api/auth/*` routes, login rate-limited 5/15min per IP+email
-- [x] 71 tests passing
-
-## Phase 0 exit criteria
-
-- [x] Prisma schema + initial migration applied
-- [x] Permission matrix + field whitelist, single definition, imported by both apps
-- [x] Zod schemas shared by forms and middleware
-- [x] Seed: 23-person tree, 3+ levels, ICs under ICs, INACTIVE + soft-deleted rows
-- [x] docker-compose, `.env.example`, strict tsconfig, ESLint + Prettier
+- **No public demo URL** — the compose path is the demo. Deploying the split
+  path above is mechanical but needs a domain to satisfy the same-site cookie.
+- **Employee-code allocation** uses read-max + bounded retry; a Postgres
+  sequence would remove the race entirely (migration required).
+- **Manager column** in the list view resolves names via a capped directory
+  fetch (100) — fine at demo scale, should become a server-side relation
+  include before it isn't.
+- **No audit log.** Soft deletes preserve rows, but "who changed what when" is
+  a table + middleware hook away and the natural next feature for an HR system.
+- **No password reset / email flows** — out of scope, and the temp-password
+  handoff on create covers onboarding for the demo.
+- **Frontend has no automated tests**; it was verified by scripted browser
+  runs (Playwright) across all three roles and both themes during development.
+  The 160 backend tests carry the security guarantees.

@@ -370,6 +370,21 @@ const EMPLOYEES: SeedEmployee[] = [
 ];
 
 async function main(): Promise<void> {
+  /**
+   * SEED_ONLY_IF_EMPTY=true (set by the api container's entrypoint): seed only
+   * a virgin database. This seed WIPES both tables to give a reproducible tree,
+   * which is right for `npm run db:seed` on a dev box — and wrong for a
+   * container restart, which must not silently reset demo data every time the
+   * process bounces.
+   */
+  if (process.env.SEED_ONLY_IF_EMPTY === 'true') {
+    const existing = await prisma.employee.count();
+    if (existing > 0) {
+      console.log(`Seed skipped: database already has ${String(existing)} employees.`);
+      return;
+    }
+  }
+
   console.log('Seeding Playstack…\n');
 
   // Rebuild from scratch so re-running gives an identical tree.

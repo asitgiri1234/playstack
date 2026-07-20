@@ -13,8 +13,10 @@
   "scripts": {
     "build:shared": "npm run build --workspace @playstack/shared",
     "dev": "npm run build:shared && concurrently -n api,web -c blue,magenta \"npm run dev --workspace @playstack/api\" \"npm run dev --workspace @playstack/web\"",
-    "db:up": "docker compose up -d",
+    "db:up": "docker compose up -d postgres pgadmin",
     "db:down": "docker compose down",
+    "stack:up": "docker compose up -d --build",
+    "stack:down": "docker compose down",
     "db:migrate": "npm run db:migrate --workspace @playstack/api",
     "db:seed": "npm run db:seed --workspace @playstack/api",
     "db:reset": "npm run db:reset --workspace @playstack/api",

@@ -24,6 +24,75 @@ services:
       retries: 10
       start_period: 10s
 
+  # --- Full-stack services -------------------------------------------------
+  # `docker compose up` brings the WHOLE stack live (postgres + api + web).
+  # For the lighter dev loop (DB in Docker, apps via `npm run dev`), use
+  # `npm run db:up`, which starts only postgres + pgadmin.
+  api:
+    build:
+      # Repo root: the workspaces need the root lockfile and packages/shared.
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: playstack-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      # Talks to the postgres SERVICE on the compose network — 5432 inside the
+      # network regardless of what host port POSTGRES_PORT maps.
+      DATABASE_URL: 'postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public'
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      # Locked to the frontend origin — never '*'. The API sends credentials.
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    ports:
+      - '${API_PORT:-4000}:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # node -e fetch: the slim image ships no curl/wget, and installing one
+      # just for a probe widens the image for nothing.
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://localhost:4000/health'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Inlined into the browser bundle at BUILD time. This is the URL the
+        # user's BROWSER calls, so it is the host-mapped API port — not the
+        # compose-internal hostname.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    container_name: playstack-web
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-3000}:3000'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://localhost:3000/login'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: playstack-pgadmin
