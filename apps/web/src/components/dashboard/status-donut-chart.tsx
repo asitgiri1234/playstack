@@ -18,8 +18,8 @@ export function StatusDonutChart({
   // series palette — "active" reading green is meaning, not decoration. Pulled
   // from the same tokens the status badges use.
   const data = [
-    { label: 'Active', value: stats?.activeEmployees ?? 0, color: 'var(--success-600)' },
-    { label: 'Inactive', value: stats?.inactiveEmployees ?? 0, color: 'var(--text-subtle)' },
+    { label: 'Active', value: stats?.activeEmployees ?? 0, color: 'var(--chart-active)' },
+    { label: 'Inactive', value: stats?.inactiveEmployees ?? 0, color: 'var(--chart-inactive)' },
   ];
   const theme = useChartTheme();
   const total = data.reduce((sum, d) => sum + d.value, 0);

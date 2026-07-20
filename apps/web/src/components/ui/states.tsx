@@ -32,10 +32,10 @@ export function EmptyState({
   icon?: ReactNode;
 }): React.JSX.Element {
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+    <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
       {icon !== undefined ? <div className="mb-4 text-content-subtle">{icon}</div> : null}
-      <h3 className="text-md font-medium text-content">{title}</h3>
-      <p className="mt-1.5 max-w-sm text-base text-content-muted">{description}</p>
+      <h3 className="text-sm font-medium text-content">{title}</h3>
+      <p className="mt-1 max-w-xs text-sm leading-relaxed text-content-muted">{description}</p>
       {action !== undefined ? <div className="mt-5">{action}</div> : null}
     </div>
   );
@@ -54,9 +54,9 @@ export function ErrorState({
   onRetry: () => void;
 }): React.JSX.Element {
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-      <h3 className="text-md font-medium text-content">{title}</h3>
-      <p className="mt-1.5 max-w-sm text-base text-content-muted">{description}</p>
+    <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+      <h3 className="text-sm font-medium text-content">{title}</h3>
+      <p className="mt-1 max-w-xs text-sm leading-relaxed text-content-muted">{description}</p>
       <Button variant="secondary" size="sm" className="mt-5" onClick={onRetry}>
         Try again
       </Button>

@@ -139,14 +139,14 @@ export function EmployeeForm({ employee }: { employee?: EmployeeDTO }): React.JS
           role="status"
           className="rounded-sm border border-border bg-surface-sunken px-3 py-2 text-sm text-content-muted"
         >
-          You do not have permission to edit this record. Fields are shown read-only.
+          You don&apos;t have permission to edit this record — fields are read-only.
         </div>
       ) : null}
 
       {formError !== null ? (
         <div
           role="alert"
-          className="rounded-sm border border-danger-500/30 bg-danger-surface px-3 py-2 text-sm text-danger-text"
+          className="rounded-sm bg-danger-surface px-3 py-2 text-sm text-danger-text"
         >
           {formError}
         </div>
@@ -355,10 +355,10 @@ function Section({
 }): React.JSX.Element {
   return (
     <fieldset className="space-y-4">
-      <legend className="mb-4 w-full border-b border-border pb-2 text-sm font-medium uppercase tracking-wide text-content-subtle">
+      <legend className="mb-4 w-full border-b border-border pb-2 text-xs font-medium text-content-subtle">
         {title}
       </legend>
-      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+      <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">{children}</div>
     </fieldset>
   );
 }

@@ -56,13 +56,21 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }): React.J
             {...(onNavigate !== undefined ? { onClick: onNavigate } : {})}
             aria-current={isActive ? 'page' : undefined}
             className={cn(
-              'flex items-center gap-2.5 rounded-sm px-3 py-2 text-base font-medium transition-colors',
+              // Active is a subtle raised surface with accent text + a hairline
+              // accent indicator — the accent touches the item, never fills it.
+              'relative flex items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors',
               isActive
-                ? 'bg-primary-subtle text-primary-text'
+                ? 'bg-surface-hover text-primary-text'
                 : 'text-content-muted hover:bg-surface-hover hover:text-content',
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            {isActive ? (
+              <span
+                className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary"
+                aria-hidden
+              />
+            ) : null}
+            <Icon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
             {item.label}
           </Link>
         );
@@ -73,11 +81,11 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }): React.J
 
 function Brand(): React.JSX.Element {
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-primary text-content-inverted">
-        <span className="text-sm font-semibold">P</span>
+    <div className="flex items-center gap-2">
+      <div className="flex h-6 w-6 items-center justify-center rounded-sm bg-primary text-content-inverted">
+        <span className="text-xs font-bold">P</span>
       </div>
-      <span className="text-md font-semibold tracking-tight text-content">Playstack</span>
+      <span className="text-sm font-semibold tracking-display text-content">Playstack</span>
     </div>
   );
 }

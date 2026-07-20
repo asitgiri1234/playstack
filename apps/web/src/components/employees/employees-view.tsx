@@ -35,10 +35,10 @@ export function EmployeesView(): React.JSX.Element {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-content">Employees</h1>
-          <p className="mt-1 text-base text-content-muted">
+          <h1 className="text-2xl font-semibold tracking-display text-content">Employees</h1>
+          <p className="mt-1 text-sm text-content-muted">
             Manage your organisation&apos;s people, roles and reporting lines.
           </p>
         </div>
@@ -46,7 +46,7 @@ export function EmployeesView(): React.JSX.Element {
         {canCreate ? (
           <Link
             href="/employees/new"
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-sm border border-transparent bg-primary px-4 text-base font-medium text-content-inverted transition-colors hover:bg-primary-hover"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-sm border border-transparent bg-primary px-3.5 text-sm font-medium text-content-inverted shadow-sm transition-colors hover:bg-primary-hover"
           >
             <Plus className="h-3.5 w-3.5" aria-hidden />
             Add employee

@@ -57,14 +57,14 @@ export function MultiSelect({
         aria-expanded={open}
         aria-haspopup="listbox"
         className={cn(
-          'inline-flex h-9 items-center gap-1.5 rounded-sm border px-3 text-base transition-colors',
+          'inline-flex h-9 items-center gap-1.5 rounded-sm border px-2.5 text-sm transition-colors',
           selected.length > 0
-            ? 'border-primary/30 bg-primary-subtle text-primary-text'
-            : 'border-border-strong bg-surface text-content-muted hover:bg-surface-hover',
+            ? 'border-border-strong bg-primary-subtle text-primary-text'
+            : 'border-border-strong bg-surface text-content-muted hover:bg-surface-hover hover:text-content',
         )}
       >
         {summary}
-        <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+        <ChevronDown className="h-3.5 w-3.5 opacity-60" aria-hidden />
       </button>
 
       {open ? (
@@ -72,7 +72,7 @@ export function MultiSelect({
           role="listbox"
           aria-multiselectable
           aria-label={label}
-          className="absolute left-0 z-20 mt-1.5 max-h-64 w-52 overflow-auto rounded-sm border border-border bg-surface-raised py-1 shadow-md"
+          className="absolute left-0 z-20 mt-1.5 max-h-64 w-52 overflow-auto rounded-md border border-border bg-surface-raised p-1 shadow-md"
         >
           {options.map((option) => {
             const isSelected = selected.includes(option.value);
@@ -83,7 +83,7 @@ export function MultiSelect({
                 role="option"
                 aria-selected={isSelected}
                 onClick={() => toggle(option.value)}
-                className="flex w-full items-center justify-between px-3 py-1.5 text-left text-base text-content hover:bg-surface-hover"
+                className="flex w-full items-center justify-between rounded-sm px-2.5 py-1.5 text-left text-sm text-content transition-colors hover:bg-surface-hover"
               >
                 {option.label}
                 {isSelected ? <Check className="h-3.5 w-3.5 text-primary" aria-hidden /> : null}

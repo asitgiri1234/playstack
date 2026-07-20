@@ -65,14 +65,12 @@ export function ProfileView(): React.JSX.Element {
         noValidate
         className="space-y-4 rounded-lg border border-border bg-surface p-6"
       >
-        <h2 className="text-sm font-medium uppercase tracking-wide text-content-subtle">
-          Editable details
-        </h2>
+        <h2 className="text-xs font-medium text-content-subtle">Editable details</h2>
 
         {formError !== null ? (
           <div
             role="alert"
-            className="rounded-sm border border-danger-500/30 bg-danger-surface px-3 py-2 text-sm text-danger-text"
+            className="rounded-sm bg-danger-surface px-3 py-2 text-sm text-danger-text"
           >
             {formError}
           </div>
@@ -120,9 +118,7 @@ export function ProfileView(): React.JSX.Element {
         — canReadField lets you read your own. On anyone else's it is omitted.
       */}
       <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-content-subtle">
-          Employment record
-        </h2>
+        <h2 className="mb-4 text-xs font-medium text-content-subtle">Employment record</h2>
         <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
           <Detail label="Employee code" value={employee.employeeCode} tabular />
           <Detail label="Full name" value={employee.name} />
@@ -154,7 +150,7 @@ function Detail({
 }): React.JSX.Element {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-content-subtle">{label}</dt>
+      <dt className="text-xs text-content-subtle">{label}</dt>
       <dd className={`mt-1 text-base text-content ${tabular ? 'tabular' : ''}`}>{value}</dd>
     </div>
   );

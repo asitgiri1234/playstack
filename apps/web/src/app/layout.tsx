@@ -1,10 +1,30 @@
 import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import { Providers } from '@/lib/providers';
 import './globals.css';
 
+/**
+ * Inter for UI, JetBrains Mono for numeric data (codes, salaries, dates,
+ * counts). Self-hosted at build time via next/font — no layout shift, no
+ * external request at runtime. The `--font-*` CSS vars are what globals.css and
+ * tailwind resolve `font-sans` / `font-mono` (and `.tabular`) against.
+ */
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const mono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+  weight: ['400', '500'],
+});
+
 export const metadata: Metadata = {
   title: 'Playstack',
-  description: 'Employee Management System',
+  description: 'Employee management, done with care.',
 };
 
 /**
@@ -18,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
     // client's first render legitimately differ on this one attribute. Without
     // this, React would warn about it on every load. It suppresses the warning
     // for <html> only, not the whole tree.
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${mono.variable}`}>
       <body className="min-h-screen bg-bg font-sans text-base text-content antialiased">
         <Providers>{children}</Providers>
       </body>

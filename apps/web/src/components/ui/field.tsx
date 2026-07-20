@@ -36,10 +36,10 @@ export function Field({
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-content">
+      <label htmlFor={id} className="block text-xs font-medium text-content-muted">
         {label}
         {required === true ? (
-          <span className="ml-0.5 text-danger-600" aria-hidden>
+          <span className="ml-1 text-content-subtle" aria-hidden>
             *
           </span>
         ) : null}
@@ -48,11 +48,11 @@ export function Field({
       {error !== undefined ? (
         // role=alert so the message is announced when validation fails, not
         // only when someone happens to tab back to the field.
-        <p id={errorId} role="alert" className="text-xs text-danger-600">
+        <p id={errorId} role="alert" className="text-xs text-danger-text">
           {error}
         </p>
       ) : hint !== undefined ? (
-        <p id={hintId} className="text-xs text-content-muted">
+        <p id={hintId} className="text-xs text-content-subtle">
           {hint}
         </p>
       ) : null}
@@ -61,10 +61,10 @@ export function Field({
 }
 
 export const inputStyles = cn(
-  'w-full rounded-sm border bg-surface px-3 text-base text-content',
+  'ring-focus w-full rounded-sm border bg-surface px-3 text-sm text-content',
   'placeholder:text-content-subtle',
-  'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-content-muted',
-  'transition-colors',
+  'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-content-subtle',
+  'transition-[color,border-color,box-shadow] duration-150',
 );
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {

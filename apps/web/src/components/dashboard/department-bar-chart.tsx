@@ -1,6 +1,6 @@
 'use client';
 
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import type { EmployeeStats } from '@/lib/api';
 import { seriesColor, useChartTheme } from '@/lib/chart-theme';
 import { ChartCard } from './chart-card';
@@ -24,28 +24,32 @@ export function DepartmentBarChart({
       isEmpty={data.length === 0}
     >
       <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-          <CartesianGrid vertical={false} stroke={theme?.grid} strokeDasharray="3 3" />
+        <BarChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: -20 }}>
+          {/* Hairline horizontal grid only — no vertical lines, no axis rules. */}
+          <CartesianGrid vertical={false} stroke={theme?.grid} strokeDasharray="0" />
           <XAxis
             dataKey="label"
-            tick={{ fill: theme?.tickText, fontSize: 12 }}
+            tick={{ fill: theme?.tickText, fontSize: 11 }}
             tickLine={false}
-            axisLine={{ stroke: theme?.grid }}
+            axisLine={false}
           />
           <YAxis
             allowDecimals={false}
-            tick={{ fill: theme?.tickText, fontSize: 12 }}
+            tick={{ fill: theme?.tickText, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
-            width={40}
+            width={32}
           />
           <ChartTooltip />
-          <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={56} isAnimationActive={false}>
-            {/* Each department its own hue, cycling the CSS-var series. */}
-            {data.map((_, i) => (
-              <Cell key={i} fill={seriesColor(theme, i)} />
-            ))}
-          </Bar>
+          {/* One accent for every bar — the x-axis labels distinguish them. A
+              single restrained colour reads more expensive than a rainbow. */}
+          <Bar
+            dataKey="value"
+            radius={[4, 4, 0, 0]}
+            maxBarSize={44}
+            isAnimationActive={false}
+            fill={seriesColor(theme, 0)}
+          />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>

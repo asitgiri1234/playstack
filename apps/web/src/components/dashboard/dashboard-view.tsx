@@ -31,20 +31,20 @@ export function DashboardView(): React.JSX.Element | null {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-content">Dashboard</h1>
-        <p className="mt-1 text-base text-content-muted">Organisation headcount at a glance.</p>
+        <h1 className="text-2xl font-semibold tracking-display text-content">Dashboard</h1>
+        <p className="mt-1 text-sm text-content-muted">Your organisation at a glance.</p>
       </div>
 
       {isError ? (
         <ErrorState
-          description="We could not load the dashboard statistics."
+          description="We couldn't load the dashboard statistics."
           onRetry={() => void refetch()}
         />
       ) : (
         <>
           <StatCards stats={stats} isLoading={isLoading} />
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <DepartmentBarChart stats={stats} isLoading={isLoading} />
             <RoleDonutChart stats={stats} isLoading={isLoading} />
             <StatusDonutChart stats={stats} isLoading={isLoading} />

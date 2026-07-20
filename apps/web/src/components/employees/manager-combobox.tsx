@@ -115,7 +115,7 @@ export function ManagerCombobox({
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name or code…"
               aria-label="Search for a manager"
-              className="h-8 w-full rounded-sm border border-border-strong bg-surface px-2 text-base"
+              className="ring-focus h-8 w-full rounded-sm border border-border-strong bg-surface px-2 text-sm"
             />
           </div>
 
@@ -129,7 +129,7 @@ export function ManagerCombobox({
                   onChange(null);
                   setOpen(false);
                 }}
-                className="flex w-full items-center justify-between px-3 py-1.5 text-left text-base text-content-muted hover:bg-surface-hover"
+                className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm text-content-muted hover:bg-surface-hover"
               >
                 <span className="flex items-center gap-1.5">
                   <X className="h-3 w-3" aria-hidden />
@@ -154,7 +154,7 @@ export function ManagerCombobox({
                       onChange(employee.id);
                       setOpen(false);
                     }}
-                    className="flex w-full items-center justify-between px-3 py-1.5 text-left text-base hover:bg-surface-hover"
+                    className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-surface-hover"
                   >
                     <span>
                       <span className="text-content">{employee.name}</span>

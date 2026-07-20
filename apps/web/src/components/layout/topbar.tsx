@@ -34,26 +34,26 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }): React.JSX.Elem
         <Menu className="h-4 w-4" aria-hidden />
       </button>
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-2.5">
         {user !== null ? (
           <>
-            <div className="hidden items-center gap-2.5 sm:flex">
+            <div className="hidden items-center gap-2 sm:flex">
               <div
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-sunken text-xs font-medium text-content-muted"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-sunken text-[10px] font-semibold text-content-muted"
                 aria-hidden
               >
                 {initialsOf(user.name)}
               </div>
               <div className="leading-tight">
                 <div className="text-sm font-medium text-content">{user.name}</div>
-                <div className="text-xs text-content-subtle">{user.employeeCode}</div>
+                <div className="tabular text-[11px] text-content-subtle">{user.employeeCode}</div>
               </div>
             </div>
             <RoleBadge role={user.role} />
           </>
         ) : null}
         <ThemeToggle />
-        <div className="h-5 w-px bg-border" aria-hidden />
+        <div className="h-4 w-px bg-border" aria-hidden />
         <Button
           variant="ghost"
           size="sm"

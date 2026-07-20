@@ -43,11 +43,11 @@ export function ChartCard({
       aria-labelledby={`${tableId}-title`}
       className="flex flex-col rounded-lg border border-border bg-surface p-5"
     >
-      <h3 id={`${tableId}-title`} className="text-md font-medium text-content">
+      <h3 id={`${tableId}-title`} className="text-sm font-medium text-content">
         {title}
       </h3>
 
-      <div className="mt-4 min-h-[220px] flex-1">
+      <div className="mt-5 min-h-[220px] flex-1">
         {isLoading ? (
           // Per-chart loading, not one page spinner — each card resolves on its
           // own so the dashboard fills in progressively.
@@ -58,7 +58,7 @@ export function ChartCard({
           </div>
         ) : isEmpty ? (
           <div className="flex h-[220px] items-center justify-center text-center">
-            <p className="text-base text-content-muted">{emptyLabel}</p>
+            <p className="text-sm text-content-muted">{emptyLabel}</p>
           </div>
         ) : (
           <>

@@ -58,7 +58,7 @@ export function LoginForm(): React.JSX.Element {
       {formError !== null ? (
         <div
           role="alert"
-          className="rounded-sm border border-danger-500/30 bg-danger-surface px-3 py-2 text-sm text-danger-text"
+          className="rounded-sm bg-danger-surface px-3 py-2 text-sm text-danger-text"
         >
           {formError}
         </div>

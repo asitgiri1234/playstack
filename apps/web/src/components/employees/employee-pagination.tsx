@@ -23,15 +23,15 @@ export function EmployeePagination({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-2.5">
       <div className="flex items-center gap-3">
-        <p className="tabular text-sm text-content-muted">
+        <p className="text-sm text-content-muted">
           {total === 0 ? (
             'No results'
           ) : (
             <>
-              <span className="font-medium text-content">
+              <span className="tabular font-medium text-content">
                 {from}–{to}
               </span>{' '}
-              of <span className="font-medium text-content">{total}</span>
+              of <span className="tabular font-medium text-content">{total}</span>
             </>
           )}
         </p>
@@ -42,7 +42,7 @@ export function EmployeePagination({
             value={limit}
             onChange={(e) => onLimitChange(Number(e.target.value))}
             aria-label="Rows per page"
-            className="h-7 rounded-sm border border-border-strong bg-surface px-1.5 text-sm text-content"
+            className="tabular h-7 rounded-sm border border-border-strong bg-surface px-1.5 text-sm text-content"
           >
             {PAGE_SIZES.map((size) => (
               <option key={size} value={size}>
@@ -54,8 +54,9 @@ export function EmployeePagination({
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="tabular text-sm text-content-muted">
-          Page {page} of {Math.max(totalPages, 1)}
+        <span className="text-sm text-content-muted">
+          Page <span className="tabular text-content">{page}</span> of{' '}
+          <span className="tabular text-content">{Math.max(totalPages, 1)}</span>
         </span>
         {/* hasPrev/hasNext come from the API — the client does not recompute
             bounds it might disagree with. */}

@@ -3,181 +3,171 @@
 @tailwind utilities;
 
 /**
- * Design tokens.
+ * Design tokens — one system, two themes.
  *
- * Every colour the UI uses resolves through a SEMANTIC variable below
- * (--surface, --border, --text-muted…), never a raw palette value in a
- * component. Dark mode is therefore a TOKEN SWAP: the `.dark` block near the
- * bottom of this file redefines the semantic layer, and every component follows
- * because none of them names a colour directly. The moment a component writes
- * `bg-zinc-200` or a literal hex, that stops being true and dark mode springs a
- * leak — which is exactly why Phase 5 audited for and removed the last two
- * (`bg-zinc-950/20` overlays → the --overlay token below).
+ * The rule that makes this maintainable: every colour a component uses resolves
+ * through a SEMANTIC variable below (--surface, --border, --text-muted, …),
+ * never a raw hex. Dark mode is therefore a token swap — the `.dark` block
+ * redefines the semantic layer and every surface follows, charts included
+ * (lib/chart-theme.ts reads these same vars at runtime).
  *
- * next-themes toggles `class="dark"` on <html>; charts read these same
- * variables through getComputedStyle (see lib/chart-theme.ts), so a chart can
- * never be legible in one theme and unreadable in the other.
- *
- * Accent is an evergreen, deliberately not the default #3B82F6 admin blue.
- * The neutral is zinc — very slightly warm, which keeps the evergreen from
- * reading as clinical.
+ * The palette is deliberately narrow: a cool neutral scale plus ONE accent
+ * (indigo). The accent is spent sparingly — primary action, active nav, focus
+ * ring, a single key data mark — never to fill a large area. Depth comes from
+ * hairline borders over a raised surface, not from drop shadows.
  */
 :root {
-  /* Neutral scale — zinc */
-  --zinc-50: #fafafa;
-  --zinc-100: #f4f4f5;
-  --zinc-200: #e4e4e7;
-  --zinc-300: #d4d4d8;
-  --zinc-400: #a1a1aa;
-  --zinc-500: #71717a;
-  --zinc-600: #52525b;
-  --zinc-700: #3f3f46;
-  --zinc-800: #27272a;
-  --zinc-900: #18181b;
-  --zinc-950: #09090b;
+  /* --- Neutral scale (cool grey) --- */
+  --neutral-0: #ffffff;
+  --neutral-50: #fbfbfc;
+  --neutral-100: #f4f4f6;
+  --neutral-150: #ececef;
+  --neutral-200: #e4e4e8;
+  --neutral-300: #d3d3d9;
+  --neutral-400: #a0a0aa;
+  --neutral-500: #71717c;
+  --neutral-600: #52525b;
+  --neutral-700: #3f3f47;
+  --neutral-800: #27272d;
+  --neutral-900: #18181b;
+  --neutral-950: #0b0b0f;
 
-  /* Accent — evergreen */
-  --accent-50: #eff6f3;
-  --accent-100: #d7e9e2;
-  --accent-200: #b0d3c6;
-  --accent-300: #82b7a5;
-  --accent-400: #559883;
-  --accent-500: #38796a;
-  --accent-600: #2b6154;
-  --accent-700: #244e45;
-  --accent-800: #1f3f38;
-  --accent-900: #1a342f;
+  /* --- Accent (indigo) — the only chromatic colour in the base UI --- */
+  --accent-300: #a5a5f2;
+  --accent-400: #8b8bef;
+  --accent-500: #5b5bd6;
+  --accent-600: #5150c9;
+  --accent-700: #4342ab;
 
-  /* Status — muted, never pure saturated */
-  --success-50: #f0fdf4;
-  --success-600: #16803c;
-  --success-700: #15803d;
-  --danger-50: #fef2f2;
-  --danger-100: #fee2e2;
-  --danger-500: #ef4444;
-  --danger-600: #dc2626;
-  --danger-700: #b91c1c;
-  --warning-50: #fffbeb;
-  --warning-600: #d97706;
+  /* --- Semantic hues, desaturated to sit calmly --- */
+  --green: #2f9e5f;
+  --green-bright: #4ade80;
+  --amber: #ca8a04;
+  --amber-bright: #fbbf24;
+  --red: #d4494f;
+  --red-bright: #f27078;
 
-  /* --- Semantic (light) --- */
-  --bg: var(--zinc-50);
-  --surface: #ffffff;
-  --surface-raised: #ffffff;
-  --surface-hover: var(--zinc-50);
-  --surface-sunken: var(--zinc-100);
+  /* ============================ LIGHT ============================ */
 
-  --border: var(--zinc-200);
-  --border-strong: var(--zinc-300);
+  /* Surfaces: canvas is a hair off-white; cards step UP to pure white, so a
+     card reads as raised without a heavy shadow. */
+  --bg: var(--neutral-50);
+  --surface: var(--neutral-0);
+  --surface-raised: var(--neutral-0);
+  --surface-hover: var(--neutral-100);
+  --surface-sunken: var(--neutral-100);
 
-  --text: var(--zinc-900);
-  --text-muted: var(--zinc-500);
-  --text-subtle: var(--zinc-400);
-  --text-inverted: #ffffff;
+  --border: var(--neutral-200);
+  --border-strong: var(--neutral-300);
+
+  /* Three-step text hierarchy, used consistently. */
+  --text: var(--neutral-900);
+  --text-muted: var(--neutral-600);
+  --text-subtle: var(--neutral-400);
+  --text-inverted: var(--neutral-0);
 
   --primary: var(--accent-600);
   --primary-hover: var(--accent-700);
-  --primary-subtle: var(--accent-50);
+  --primary-subtle: rgb(91 91 214 / 0.08);
   --primary-text: var(--accent-700);
 
   --ring: var(--accent-500);
 
-  /* Status surfaces referenced by badges/alerts, tokenised so dark mode can
-     dim them rather than glow. */
-  --success-surface: var(--success-50);
-  --success-text: var(--success-700);
-  --danger-surface: var(--danger-50);
-  --danger-text: var(--danger-700);
-  --warning-surface: var(--warning-50);
-  --warning-text: var(--warning-600);
+  --success-surface: rgb(47 158 95 / 0.1);
+  --success-text: #1c7a48;
+  --success-dot: var(--green);
+  --danger-surface: rgb(212 73 79 / 0.1);
+  --danger-text: #b23a40;
+  --danger-solid: var(--red);
+  --danger-solid-hover: #c23c42;
+  --warning-surface: rgb(202 138 4 / 0.12);
+  --warning-text: #8a6100;
 
-  /* Modal/drawer scrim. A token, because zinc-950/20 over a dark surface is
-     invisible — dark mode needs a stronger, cooler scrim. */
-  --overlay: rgb(9 9 11 / 0.2);
+  /* The one place a scrim appears — dialogs/drawers. */
+  --overlay: rgb(11 11 15 / 0.32);
 
-  /* Skeleton shimmer, tokenised: a white sweep is invisible on a dark base. */
-  --skeleton-base: var(--zinc-100);
-  --skeleton-shimmer: rgb(255 255 255 / 0.6);
+  --skeleton-base: var(--neutral-150);
+  --skeleton-shimmer: rgb(255 255 255 / 0.65);
 
-  /* Chart series. Accent-led, with distinct hues that stay distinguishable in
-     both themes and for the common colour-vision deficiencies. Read by
-     lib/chart-theme.ts, never hardcoded in a chart component. */
+  /* Chart marks: accent-led, staying in a cool family — restrained, not a
+     rainbow. Muted neutrals fill the remaining series. */
   --chart-1: var(--accent-500);
-  --chart-2: #6366f1;
-  --chart-3: #d97706;
-  --chart-4: #0ea5e9;
-  --chart-5: #db2777;
-  --chart-grid: var(--zinc-200);
-  --chart-axis: var(--zinc-500);
+  --chart-2: #8a8acc;
+  --chart-3: #6b8fb5;
+  --chart-4: #9a86c4;
+  --chart-5: #a7a7b8;
+  --chart-grid: var(--neutral-200);
+  --chart-axis: var(--neutral-400);
+  --chart-active: var(--green);
+  --chart-inactive: var(--neutral-300);
 
-  /* Subtle borders over heavy shadows — these are almost imperceptible on
-     purpose; depth comes from the border, not a drop shadow. */
-  --shadow-sm: 0 1px 2px 0 rgb(9 9 11 / 0.04);
-  --shadow-md: 0 2px 8px -2px rgb(9 9 11 / 0.08);
-  --shadow-lg: 0 8px 24px -6px rgb(9 9 11 / 0.12);
+  /* Shadows are a whisper, reserved for true overlays. Elevation elsewhere is
+     border + surface. */
+  --shadow-sm: 0 1px 2px 0 rgb(11 11 15 / 0.04);
+  --shadow-md: 0 4px 12px -2px rgb(11 11 15 / 0.08), 0 2px 4px -2px rgb(11 11 15 / 0.04);
+  --shadow-lg: 0 12px 32px -8px rgb(11 11 15 / 0.14), 0 4px 8px -4px rgb(11 11 15 / 0.06);
 
-  --radius: 0.5rem;
-  --radius-sm: 0.375rem;
-  --radius-lg: 0.75rem;
+  /* One modest radius family. */
+  --radius: 0.5rem; /* 8px — cards, dialogs */
+  --radius-sm: 0.375rem; /* 6px — buttons, inputs, badges */
+  --radius-lg: 0.625rem; /* 10px — large panels */
 
   color-scheme: light;
 }
 
-/**
- * Dark theme — the token swap.
- *
- * Only the SEMANTIC layer is redefined; the raw palette above is reused. Note
- * the surface ladder is not a simple inversion: --bg is the darkest, surfaces
- * sit ABOVE it (lighter), which is how depth reads in dark UIs — raised things
- * are lighter, not darker. Accent shifts one step brighter because the evergreen
- * loses contrast against a near-black background.
- */
+/* ============================ DARK ============================ */
 .dark {
-  --bg: var(--zinc-950);
-  --surface: var(--zinc-900);
-  --surface-raised: #1c1c1f;
-  --surface-hover: var(--zinc-800);
-  --surface-sunken: #141416;
+  --bg: var(--neutral-950);
+  /* Surfaces step UP from the near-black canvas — raised = lighter in dark UIs. */
+  --surface: #131318;
+  --surface-raised: #17171d;
+  --surface-hover: #1d1d24;
+  --surface-sunken: #0f0f13;
 
-  --border: #2a2a2e;
-  --border-strong: var(--zinc-700);
+  --border: #24242b;
+  --border-strong: #33333c;
 
-  --text: var(--zinc-100);
-  --text-muted: var(--zinc-400);
-  --text-subtle: var(--zinc-500);
-  --text-inverted: var(--zinc-950);
+  --text: #ededf1;
+  --text-muted: #9e9ea9;
+  --text-subtle: #6a6a75;
+  --text-inverted: var(--neutral-950);
 
+  /* Accent brightens one step so it holds contrast on near-black. */
   --primary: var(--accent-400);
   --primary-hover: var(--accent-300);
-  --primary-subtle: rgb(56 121 106 / 0.15);
+  --primary-subtle: rgb(139 139 239 / 0.16);
   --primary-text: var(--accent-300);
 
   --ring: var(--accent-400);
 
-  --success-surface: rgb(22 128 60 / 0.15);
-  --success-text: #4ade80;
-  --danger-surface: rgb(220 38 38 / 0.15);
-  --danger-text: #f87171;
-  --warning-surface: rgb(217 119 6 / 0.15);
-  --warning-text: #fbbf24;
+  --success-surface: rgb(74 222 128 / 0.14);
+  --success-text: #5ee08a;
+  --success-dot: var(--green-bright);
+  --danger-surface: rgb(242 112 120 / 0.15);
+  --danger-text: #f28a90;
+  --danger-solid: #d24a50;
+  --danger-solid-hover: #de5157;
+  --warning-surface: rgb(251 191 36 / 0.15);
+  --warning-text: var(--amber-bright);
 
   --overlay: rgb(0 0 0 / 0.6);
 
-  --skeleton-base: var(--zinc-800);
-  --skeleton-shimmer: rgb(255 255 255 / 0.06);
+  --skeleton-base: #1d1d24;
+  --skeleton-shimmer: rgb(255 255 255 / 0.05);
 
   --chart-1: var(--accent-400);
-  --chart-2: #818cf8;
-  --chart-3: #fbbf24;
-  --chart-4: #38bdf8;
-  --chart-5: #f472b6;
-  --chart-grid: #2a2a2e;
-  --chart-axis: var(--zinc-400);
+  --chart-2: #9d9de0;
+  --chart-3: #7fa5cc;
+  --chart-4: #b19ede;
+  --chart-5: #9a9aad;
+  --chart-grid: #24242b;
+  --chart-axis: #6a6a75;
+  --chart-active: var(--green-bright);
+  --chart-inactive: #3a3a44;
 
-  /* Shadows barely register on dark surfaces; deepen and rely more on borders. */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-  --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.4);
-  --shadow-lg: 0 8px 24px -6px rgb(0 0 0 / 0.5);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.6);
 
   color-scheme: dark;
 }
@@ -187,51 +177,67 @@
 }
 
 html {
-  /* 4/8px rhythm: everything in the UI is a multiple of 4. */
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
 body {
   background-color: var(--bg);
   color: var(--text);
+  /* Inter feature settings: contextual alternates + disambiguated glyphs. */
   font-feature-settings:
     'cv02' 1,
     'cv03' 1,
-    'cv04' 1;
+    'cv04' 1,
+    'cv11' 1;
+  letter-spacing: -0.006em;
+}
+
+/* Display/heading sizes get negative tracking — large text reads loose at
+   default spacing. Applied via a utility so it stays consistent. */
+.tracking-display {
+  letter-spacing: -0.021em;
 }
 
 /**
- * Ease the surface/border/text colours between themes so the toggle is a smooth
- * fade, not a flash. Scoped to colour properties only — transitioning `all`
- * would drag layout and transforms into it. next-themes sets
- * disableTransitionOnChange, which momentarily suppresses this during the swap
- * to avoid a half-transitioned first paint; this rule governs deliberate toggles.
- */
-:where(body, [class*='bg-surface'], [class*='border'], [class*='text-content']) {
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-}
-
-/**
- * Tabular numerals for money, dates and counts.
- *
- * Proportional digits make a column of salaries ragged — the eye cannot compare
- * magnitudes when a 1 is narrower than an 8. This is the single highest-value
- * typographic decision in a table like this.
+ * Numeric data — employee codes, salaries, dates, counts — renders in the mono
+ * face with tabular figures. Proportional digits make a column of numbers
+ * ragged; mono + tnum makes them a precise grid. `.tabular` is applied exactly
+ * to those surfaces, so this one rule mono-izes all of them.
  */
 .tabular {
+  font-family: var(--font-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
+  letter-spacing: 0;
 }
 
-/* One focus treatment, everywhere. Never remove it without replacing it. */
+/* Theme-swap easing: colour only, fast. next-themes suppresses this during the
+   toggle's first frame to avoid a half-transitioned paint. */
+:where(body, [class*='bg-surface'], [class*='border'], [class*='text-content']) {
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease;
+}
+
+/* One focus treatment everywhere. Never removed without replacement. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
+}
+
+/**
+ * Inputs opt into a quieter focus: the border turns accent and a soft accent
+ * halo replaces the offset outline (an offset ring around a boxed input reads
+ * as a gap). color-mix keeps it token-driven and theme-correct.
+ */
+.ring-focus:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 22%, transparent);
 }
 
 @keyframes shimmer {
@@ -252,7 +258,7 @@ body {
   inset: 0;
   transform: translateX(-100%);
   background-image: linear-gradient(90deg, transparent, var(--skeleton-shimmer), transparent);
-  animation: shimmer 1.6s infinite;
+  animation: shimmer 1.5s infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

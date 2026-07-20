@@ -28,16 +28,14 @@ export function EmployeeTable({
 }: Props): React.JSX.Element {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-base">
+      <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-border bg-surface-sunken/60">
+          {/* Sticky, muted header — a precise column strip that stays put while
+              the body scrolls. */}
+          <tr className="sticky top-0 z-10 border-b border-border bg-surface">
             <SortableHeader field="name" label="Employee" {...{ sortBy, sortOrder, onSort }} />
             <Th>Email</Th>
-            <SortableHeader
-              field="department"
-              label="Department"
-              {...{ sortBy, sortOrder, onSort }}
-            />
+            <SortableHeader field="department" label="Dept" {...{ sortBy, sortOrder, onSort }} />
             <Th>Designation</Th>
             <SortableHeader
               field="salary"
@@ -54,51 +52,51 @@ export function EmployeeTable({
             <Th>Status</Th>
             <Th>Role</Th>
             <Th>Manager</Th>
-            <th scope="col" className="w-10 px-3 py-2.5">
+            <th scope="col" className="w-10 px-3 py-2">
               <span className="sr-only">Actions</span>
             </th>
           </tr>
         </thead>
-        <tbody className={cn('transition-opacity', isFetching ? 'opacity-60' : 'opacity-100')}>
+        <tbody className={cn('transition-opacity', isFetching ? 'opacity-50' : 'opacity-100')}>
           {employees.map((employee) => (
             <tr
               key={employee.id}
-              className="border-b border-border last:border-0 hover:bg-surface-hover"
+              className="group border-b border-border last:border-0 transition-colors hover:bg-surface-hover"
             >
-              <td className="px-3 py-2.5">
+              <td className="h-12 px-3">
                 <Link
                   href={`/employees/${employee.id}/edit`}
-                  className="font-medium text-content hover:text-primary-text"
+                  className="font-medium text-content transition-colors hover:text-primary-text"
                 >
                   {employee.name}
                 </Link>
                 <div className="tabular text-xs text-content-subtle">{employee.employeeCode}</div>
               </td>
-              <td className="px-3 py-2.5 text-content-muted">{employee.email}</td>
-              <td className="px-3 py-2.5 text-content-muted">{employee.department}</td>
-              <td className="px-3 py-2.5 text-content-muted">{employee.designation}</td>
-              {/* Numeric columns are right-aligned and tabular so magnitudes
+              <td className="px-3 text-content-muted">{employee.email}</td>
+              <td className="px-3 text-content-muted">{employee.department}</td>
+              <td className="px-3 text-content-muted">{employee.designation}</td>
+              {/* Numeric columns are right-aligned and mono-tabular so magnitudes
                   line up and can be compared down the column. */}
-              <td className="tabular px-3 py-2.5 text-right text-content">
+              <td className="tabular px-3 text-right font-medium text-content">
                 {formatSalary(employee.salary)}
               </td>
-              <td className="tabular px-3 py-2.5 text-right text-content-muted">
+              <td className="tabular px-3 text-right text-content-muted">
                 {formatDate(employee.joiningDate)}
               </td>
-              <td className="px-3 py-2.5">
+              <td className="px-3">
                 <StatusBadge status={employee.status} />
               </td>
-              <td className="px-3 py-2.5">
+              <td className="px-3">
                 <RoleBadge role={employee.role} />
               </td>
-              <td className="px-3 py-2.5 text-content-muted">
+              <td className="px-3 text-content-muted">
                 {employee.managerId === null ? (
                   <span className="text-content-subtle">—</span>
                 ) : (
                   (managerNames.get(employee.managerId) ?? '—')
                 )}
               </td>
-              <td className="px-3 py-2.5">
+              <td className="px-3">
                 <EmployeeRowActions employee={employee} />
               </td>
             </tr>
@@ -121,7 +119,7 @@ function Th({
     <th
       scope="col"
       className={cn(
-        'px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-content-subtle',
+        'h-9 px-3 text-xs font-medium text-content-subtle',
         align === 'right' ? 'text-right' : 'text-left',
       )}
     >
@@ -154,19 +152,21 @@ function SortableHeader({
       // aria-sort is how a screen reader announces the current sort; the arrow
       // glyph alone is invisible to it.
       aria-sort={isActive ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={cn('px-3 py-2.5', align === 'right' ? 'text-right' : 'text-left')}
+      className={cn('h-9 px-3', align === 'right' ? 'text-right' : 'text-left')}
     >
       <button
         type="button"
         onClick={() => onSort(field)}
         className={cn(
-          'inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide transition-colors hover:text-content',
+          'inline-flex items-center gap-1 text-xs font-medium transition-colors hover:text-content',
           isActive ? 'text-content' : 'text-content-subtle',
           align === 'right' ? 'flex-row-reverse' : '',
         )}
       >
         {label}
-        <Icon className="h-3 w-3" aria-hidden />
+        {/* Directional arrow in accent when this is the active sort; a faint
+            neutral chevron otherwise, so sortability is discoverable but quiet. */}
+        <Icon className={cn('h-3 w-3', isActive ? 'text-primary' : 'opacity-35')} aria-hidden />
       </button>
     </th>
   );

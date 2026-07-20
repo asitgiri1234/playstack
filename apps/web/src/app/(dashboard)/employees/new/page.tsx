@@ -16,9 +16,9 @@ export default function NewEmployeePage(): React.JSX.Element {
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
           Employees
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-content">Add employee</h1>
-        <p className="mt-1 text-base text-content-muted">
-          A temporary password is generated and shown once after creation.
+        <h1 className="mt-2 text-2xl font-semibold tracking-display text-content">Add employee</h1>
+        <p className="mt-1 text-sm text-content-muted">
+          A temporary password is generated and shown once after you create the record.
         </p>
       </div>
 

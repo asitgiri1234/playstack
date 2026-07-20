@@ -102,19 +102,19 @@ export function Dialog({
         aria-describedby={description !== undefined ? 'dialog-description' : undefined}
         tabIndex={-1}
         className={cn(
-          'relative w-full max-w-md rounded-lg border border-border bg-surface-raised p-6 shadow-lg',
+          'relative w-full max-w-md rounded-lg border border-border bg-surface-raised p-5 shadow-lg',
         )}
       >
-        <h2 id="dialog-title" className="text-lg font-semibold text-content">
+        <h2 id="dialog-title" className="text-md font-semibold tracking-display text-content">
           {title}
         </h2>
         {description !== undefined ? (
-          <p id="dialog-description" className="mt-2 text-base text-content-muted">
+          <p id="dialog-description" className="mt-1 text-sm text-content-muted">
             {description}
           </p>
         ) : null}
         <div className="mt-4">{children}</div>
-        {footer !== undefined ? <div className="mt-6 flex justify-end gap-2">{footer}</div> : null}
+        {footer !== undefined ? <div className="mt-5 flex justify-end gap-2">{footer}</div> : null}
       </div>
     </div>
   );

@@ -37,18 +37,16 @@ export function TreeNode({ node }: { node: OrgTreeNode }): React.JSX.Element {
             }
           }}
           className={cn(
-            'relative w-56 cursor-pointer rounded-lg border bg-surface p-3 text-left transition-colors',
-            selected
-              ? 'border-primary ring-1 ring-primary'
-              : 'border-border hover:border-border-strong',
+            'relative w-56 cursor-pointer rounded-lg border bg-surface p-3 text-left shadow-sm transition-colors',
+            selected ? 'border-primary' : 'border-border hover:border-border-strong',
           )}
         >
           <div className="flex items-start gap-2.5">
             <Avatar node={node} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-base font-medium text-content">{node.name}</p>
+              <p className="truncate text-sm font-medium text-content">{node.name}</p>
               <p className="truncate text-xs text-content-muted">{node.designation}</p>
-              <div className="mt-1.5 flex items-center gap-1.5">
+              <div className="mt-2 flex items-center gap-1.5">
                 <RoleBadge role={node.role} />
               </div>
             </div>

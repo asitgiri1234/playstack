@@ -46,9 +46,9 @@ export function EditEmployeeView({ id }: { id: string }): React.JSX.Element {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight text-content">{employee.name}</h1>
-        <span className="tabular text-base text-content-subtle">{employee.employeeCode}</span>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <h1 className="text-2xl font-semibold tracking-display text-content">{employee.name}</h1>
+        <span className="tabular text-sm text-content-subtle">{employee.employeeCode}</span>
         <StatusBadge status={employee.status} />
         <RoleBadge role={employee.role} />
       </div>

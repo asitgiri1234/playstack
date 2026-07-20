@@ -82,9 +82,9 @@ export function OrgTreeView(): React.JSX.Element {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-content">Organization</h1>
-          <p className="mt-1 text-base text-content-muted">
-            {roots.length === 1 ? 'Reporting structure' : `${roots.length} reporting lines`}
+          <h1 className="text-2xl font-semibold tracking-display text-content">Organization</h1>
+          <p className="mt-1 text-sm text-content-muted">
+            {roots.length === 1 ? 'Reporting structure' : `${String(roots.length)} reporting lines`}
             {data !== undefined && data.orphanCount > 0
               ? ` · ${String(data.orphanCount)} unassigned surfaced as roots`
               : ''}
